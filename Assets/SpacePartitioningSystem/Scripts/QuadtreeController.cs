@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -72,11 +73,34 @@ namespace SpacePartitioningSystem
             {
                 TryAdd(storedObjects[i]);
             }
+
+            StartCoroutine(RemoveFirstObjectCoroutine());
         }
 
+        private IEnumerator RemoveFirstObjectCoroutine()
+        {
+            for (int i = 0; i < storedObjects.Length; i++)
+            {
+                var removedObject = storedObjects[i];
+                Debug.Log($"Removing \'{removedObject.name}\' object...");
+                yield return new WaitForSeconds(2f);
+                
+                TryRemove(removedObject);
+                removedObject.gameObject.SetActive(false);
+                Debug.Log($"Object \'{removedObject.name}\' was removed!");
+            }
+        }
+
+        // todo: value to object rename
         public bool TryAdd(Transform value)
         {
             return TryAdd(value, root, 0);
+        }
+
+        // todo: value to object rename
+        public bool TryRemove(Transform value)
+        {
+            return TryRemove(value, root);
         }
 
         private bool TryAdd(Transform value, Node<Transform> node, int depth)
@@ -98,6 +122,7 @@ namespace SpacePartitioningSystem
                     Node<Transform>[] childrens = Split(node);
 
                     // todo: isValuesTransfered? надо ли?
+                    // todo: перенести в отдельный метод?
                     bool isValuesTransfered = false;
                     for (int i = 0; i < node.values.Count; i++)
                     {
@@ -123,9 +148,9 @@ namespace SpacePartitioningSystem
             }
             else
             {
-                for (int j = 0; j < node.childrens.Length; j++)
+                for (int i = 0; i < node.childrens.Length; i++)
                 {
-                    if (TryAdd(value, node.childrens[j], depth + 1))
+                    if (TryAdd(value, node.childrens[i], depth + 1))
                     {
                         break;
                     }
@@ -133,6 +158,26 @@ namespace SpacePartitioningSystem
             }
             
             return true;
+        }
+
+        // todo: node rename, value rename
+        private bool TryRemove(Transform value, Node<Transform> node)
+        {
+            if (node.IsLeaf())
+            {
+                bool isRemoved = node.values.Remove(value);
+                return isRemoved;
+            }
+            
+            for (int i = 0; i < node.childrens.Length; i++)
+            {
+                if (TryRemove(value, node.childrens[i]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // todo: move to Node<T>?
