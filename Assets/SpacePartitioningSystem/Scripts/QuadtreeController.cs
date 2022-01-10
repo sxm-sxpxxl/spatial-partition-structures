@@ -65,25 +65,47 @@ namespace SpacePartitioningSystem
         private void Awake()
         {
             root = new Node<Transform>(boundary);
+            HideAllObjects();
         }
 
         private void Start()
         {
+            StartCoroutine(AddObjectsCoroutine());
+        }
+        
+        private const float DELAY = 2f;
+
+        private void HideAllObjects()
+        {
             for (int i = 0; i < storedObjects.Length; i++)
             {
-                TryAdd(storedObjects[i]);
+                storedObjects[i].gameObject.SetActive(false);
             }
-
-            StartCoroutine(RemoveFirstObjectCoroutine());
+        }
+        
+        private IEnumerator AddObjectsCoroutine()
+        {
+            for (int i = 0; i < storedObjects.Length; i++)
+            {
+                var target = storedObjects[i];
+                Debug.Log($"Adding \'{target.name}\' object...");
+                yield return new WaitForSeconds(DELAY);
+                
+                TryAdd(target);
+                target.gameObject.SetActive(true);
+                Debug.Log($"Object \'{target.name}\' was added!");
+            }
+            
+            StartCoroutine(RemoveObjectsCoroutine());
         }
 
-        private IEnumerator RemoveFirstObjectCoroutine()
+        private IEnumerator RemoveObjectsCoroutine()
         {
             for (int i = 0; i < storedObjects.Length; i++)
             {
                 var removedObject = storedObjects[i];
                 Debug.Log($"Removing \'{removedObject.name}\' object...");
-                yield return new WaitForSeconds(2f);
+                yield return new WaitForSeconds(DELAY);
                 
                 TryRemove(removedObject);
                 removedObject.gameObject.SetActive(false);
@@ -173,11 +195,46 @@ namespace SpacePartitioningSystem
             {
                 if (TryRemove(value, node.childrens[i]))
                 {
+                    TryMerge(node);
                     return true;
                 }
             }
 
             return false;
+        }
+
+        private bool TryMerge(Node<Transform> node)
+        {
+            // todo: asserts?
+            if (node.childrens == null)
+            {
+                return false;
+            }
+
+            int totalObjectsCount = 0;
+            List<Transform> transferedObjects = new List<Transform>(capacity: Threshold);
+            
+            for (int i = 0; i < node.childrens.Length; i++)
+            {
+                if (node.childrens[i].IsLeaf() == false)
+                {
+                    return false;
+                }
+                
+                totalObjectsCount += node.childrens[i].values.Count;
+
+                if (totalObjectsCount > Threshold)
+                {
+                    return false;
+                }
+
+                transferedObjects.AddRange(node.childrens[i].values);
+            }
+
+            node.values.AddRange(transferedObjects);
+            node.childrens = null;
+            
+            return true;
         }
 
         // todo: move to Node<T>?
