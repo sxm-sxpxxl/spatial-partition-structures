@@ -4,11 +4,11 @@ namespace SpatialPartitionSystem
 {
     public class PlaymodeOnlyDebugDrawer : IDebugDrawer
     {
-        private Color color = Color.white;
+        private Color _color = Color.white;
         
         public void SetColor(Color color)
         {
-            this.color = color;
+            _color = color;
         }
 
         public void DrawWireCube(Vector3 center, Vector3 size)
@@ -36,10 +36,10 @@ namespace SpatialPartitionSystem
             Vector3 point3 = center + upOffset + rightOffset;
             Vector3 point4 = center - upOffset + rightOffset;
             
-            Debug.DrawLine(point1, point2, color);
-            Debug.DrawLine(point2, point3, color);
-            Debug.DrawLine(point3, point4, color);
-            Debug.DrawLine(point4, point1, color);
+            Debug.DrawLine(point1, point2, _color);
+            Debug.DrawLine(point2, point3, _color);
+            Debug.DrawLine(point3, point4, _color);
+            Debug.DrawLine(point4, point1, _color);
         }
     }
 }

@@ -1,3 +1,4 @@
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -5,9 +6,9 @@ using Random = UnityEngine.Random;
 
 namespace SpatialPartitionSystem
 {
-    public class QuadtreeController : MonoBehaviour
+    public class OctreeController : MonoBehaviour
     {
-        [Header("Quadtree Settings")]
+        [Header("Octree Settings")]
         [SerializeField] private Bounds bounds = new Bounds();
         [SerializeField, Range(1, 8)] private int maxObjects = 4;
         [SerializeField, Range(1, 16)] private int maxDepth = 8;
@@ -32,8 +33,8 @@ namespace SpatialPartitionSystem
         [SerializeField] private bool isMotionUpdated = false;
         [SerializeField, Range(0.1f, 10f)] private float speed = 1f;
 
-        private readonly List<SpatialGameObject> _quadtreeStoredObjects = new List<SpatialGameObject>(capacity: 100);
-        private Quadtree<SpatialGameObject> _quadtree;
+        private readonly List<SpatialGameObject> _octreeStoredObjects = new List<SpatialGameObject>(capacity: 100);
+        private Octree<SpatialGameObject> _octree;
 
         private Vector3[] _objVelocities;
 
@@ -42,13 +43,13 @@ namespace SpatialPartitionSystem
             Gizmos.color = queryBoundaryColor;
             Gizmos.DrawCube(queryBounds.center, queryBounds.size);
 
-            if (_quadtree == null)
+            if (_octree == null)
             {
                 Gizmos.DrawWireCube(bounds.center, bounds.size);
                 return;
             }
             
-            var queryObjects = _quadtree.Query(queryBounds, _quadtreeStoredObjects.Count);
+            var queryObjects = _octree.Query(queryBounds, _octreeStoredObjects.Count);
             
             if (queryObjects != null)
             {
@@ -62,7 +63,7 @@ namespace SpatialPartitionSystem
 
         private void Awake()
         {
-            _quadtree = new Quadtree<SpatialGameObject>(bounds, maxObjects, maxDepth);
+            _octree = new Octree<SpatialGameObject>(bounds, maxObjects, maxDepth);
             HideAllObjects();
         }
 
@@ -87,16 +88,17 @@ namespace SpatialPartitionSystem
             {
                 float randomX = Random.Range(bounds.min.x, bounds.max.x);
                 float randomY = Random.Range(bounds.min.y, bounds.max.y);
+                float randomZ = Random.Range(bounds.min.z, bounds.max.z);
 
-                var instance = Instantiate(randomObjectPrefab, new Vector3(randomX, randomY), Quaternion.identity, randomObjectsContainer);
+                var instance = Instantiate(randomObjectPrefab, new Vector3(randomX, randomY, randomZ), Quaternion.identity, randomObjectsContainer);
                 instance.name = instance.name + $" ({i})";
                 instance.gameObject.SetActive(false);
                 
                 Debug.Log($"Adding \'{instance.name}\' random object...");
                 yield return new WaitForSeconds(delay);
                 
-                _quadtree.TryAdd(instance);
-                _quadtreeStoredObjects.Add(instance);
+                _octree.TryAdd(instance);
+                _octreeStoredObjects.Add(instance);
                 
                 instance.gameObject.SetActive(true);
                 
@@ -118,8 +120,8 @@ namespace SpatialPartitionSystem
                 Debug.Log($"Adding \'{target.name}\' stored object...");
                 yield return new WaitForSeconds(delay);
                 
-                _quadtree.TryAdd(target);
-                _quadtreeStoredObjects.Add(target);
+                _octree.TryAdd(target);
+                _octreeStoredObjects.Add(target);
 
                 target.gameObject.SetActive(true);
                 Debug.Log($"Object \'{target.name}\' was added!");
@@ -131,22 +133,22 @@ namespace SpatialPartitionSystem
 
         private void Update()
         {
-            _quadtree.DebugDraw(true);
+            _octree.DebugDraw(true);
             
-            for (int i = 0; i < _quadtreeStoredObjects.Count; i++)
+            for (int i = 0; i < _octreeStoredObjects.Count; i++)
             {
                 if (isMotionUpdated)
                 {
                     UpdatePositionFor(i);
                 }
                 
-                _quadtree.Update(_quadtreeStoredObjects[i]);
+                _octree.Update(_octreeStoredObjects[i]);
             }
         }
 
         private void UpdatePositionFor(int index)
         {
-            var objTransform = _quadtreeStoredObjects[index].transform;
+            var objTransform = _octreeStoredObjects[index].transform;
             var objVelocity = _objVelocities[index];
 
             objTransform.position += objVelocity * Time.deltaTime;
@@ -169,6 +171,12 @@ namespace SpatialPartitionSystem
                 objPosition.y = Mathf.Clamp(objTransform.position.y, bounds.min.y, bounds.max.y);
                 objVelocity.y = -objVelocity.y;
             }
+            
+            if (objTransform.position.z > bounds.max.z || objTransform.position.z < bounds.min.z)
+            {
+                objPosition.z = Mathf.Clamp(objTransform.position.z, bounds.min.z, bounds.max.z);
+                objVelocity.z = -objVelocity.z;
+            }
 
             objTransform.position = objPosition;
             _objVelocities[index] = speed * objVelocity.normalized;
@@ -180,39 +188,36 @@ namespace SpatialPartitionSystem
 
             for (int i = 0; i < count; i++)
             {
-                var dir = Random.onUnitSphere;
-                dir.z = 0f;
-
-                _objVelocities[i] = speed * dir;
+                _objVelocities[i] = speed * Random.onUnitSphere;
             }
         }
 
         private IEnumerator RemoveObjectsCoroutine()
         {
-            for (int i = 0; i < _quadtreeStoredObjects.Count; i++)
+            for (int i = 0; i < _octreeStoredObjects.Count; i++)
             {
-                var removedObject = _quadtreeStoredObjects[i];
+                var removedObject = _octreeStoredObjects[i];
                 Debug.Log($"Removing \'{removedObject.name}\' object...");
                 yield return new WaitForSeconds(delay);
                 
-                _quadtree.TryRemove(removedObject);
+                _octree.TryRemove(removedObject);
                 
                 removedObject.gameObject.SetActive(false);
                 Debug.Log($"Object \'{removedObject.name}\' was removed!");
                 Debug.Log($"************************************");
             }
             
-            _quadtreeStoredObjects.Clear();
+            _octreeStoredObjects.Clear();
         }
 
         private void ClearQuadtree()
         {
-            foreach (var removedObject in _quadtreeStoredObjects)
+            foreach (var removedObject in _octreeStoredObjects)
             {
                 removedObject.gameObject.SetActive(false);
             }
 
-            _quadtree.Clear();
+            _octree.Clear();
         }
     }
 }
