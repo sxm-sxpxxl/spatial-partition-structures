@@ -87,7 +87,70 @@ namespace SpatialPartitionSystem
             Assert.IsNotNull(obj);
             return TryRemove(obj, root);
         }
-        
+
+        /// <summary>
+        /// Clears the whole tree.
+        /// </summary>
+        public void Clear()
+        {
+            root.childrens = null;
+            root.objects.Clear();
+        }
+
+        /// <summary>
+        /// Updates the object's location in the tree if its bounds have changed.
+        /// </summary>
+        /// <param name="obj">The updated object.</param>
+        public void Update(TObject obj)
+        {
+            Assert.IsNotNull(obj);
+
+            if (TryGetSmallestNodeRelativeFor(
+                obj,
+                root,
+                null,
+                out Node<TObject> smallestNode,
+                out Node<TObject> parentSmallestNode
+            ) == false)
+            {
+                TryAdd(obj, root, 0);
+                return;
+            }
+            
+            if (smallestNode.bounds.Intersects(obj.Bounds) == false)
+            {
+                TryRemove(obj, smallestNode);
+                TryAdd(obj, root, 0);
+            }
+            else
+            {
+                if (parentSmallestNode != null)
+                {
+                    TryMerge(parentSmallestNode);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Whether the object is part of the tree or not.
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public bool Contains(TObject obj)
+        {
+            return TryGetSmallestNodeRelativeFor(obj, root, null, out _, out _);
+        }
+
+        /// <summary>
+        /// Whether the bounds are completely inside the tree or not.
+        /// </summary>
+        /// <param name="bounds"></param>
+        /// <returns></returns>
+        public bool Contains(Bounds bounds)
+        {
+            return root.bounds.Contains(bounds.min) && root.bounds.Contains(bounds.max);
+        }
+
         /// <summary>
         /// Returns an enumerable which iterates over all objects overlapping the given bounds.
         /// </summary>
@@ -258,6 +321,38 @@ namespace SpatialPartitionSystem
             node.childrens = null;
             
             return true;
+        }
+        
+        private bool TryGetSmallestNodeRelativeFor(TObject obj, Node<TObject> relativeNode, Node<TObject> parentRelativeNode, out Node<TObject> smallestNode, out Node<TObject> parentSmallestNode)
+        {
+            if (relativeNode.IsLeaf)
+            {
+                bool isObjContained = relativeNode.objects.Contains(obj);
+                
+                smallestNode = isObjContained ? relativeNode : null;
+                parentSmallestNode = isObjContained ? parentRelativeNode : null;
+                return isObjContained;
+            }
+
+            for (int i = 0; i < relativeNode.childrens.Length; i++)
+            {
+                if (TryGetSmallestNodeRelativeFor(
+                    obj,
+                    relativeNode.childrens[i], 
+                    relativeNode,
+                    out Node<TObject> innerSmallestNode,
+                    out Node<TObject> innerParentSmallestNode
+                ))
+                {
+                    smallestNode = innerSmallestNode;
+                    parentSmallestNode = innerParentSmallestNode;
+                    return true;
+                }
+            }
+
+            smallestNode = null;
+            parentSmallestNode = null;
+            return false;
         }
     }
 }

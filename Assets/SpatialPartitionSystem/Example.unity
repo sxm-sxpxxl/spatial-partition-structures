@@ -883,11 +883,11 @@ MonoBehaviour:
   bounds:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 5, y: 5, z: 0}
-  maxObjects: 1
+  maxObjects: 4
   maxDepth: 8
-  queryBoundary:
-    m_Center: {x: -2.5, y: 2.5, z: 0}
-    m_Extent: {x: 2.5, y: 2.5, z: 0}
+  queryBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 1, y: 1, z: 0}
   queryBoundaryColor: {r: 1, g: 1, b: 0, a: 0.49803922}
   storedObjects:
   - {fileID: 3711780945569357970}
@@ -896,11 +896,13 @@ MonoBehaviour:
   - {fileID: 134440146}
   - {fileID: 38741522}
   - {fileID: 58912840}
-  isRandomObjectsAdded: 1
-  randomObjectsCount: 50
+  isRandomObjectsAdded: 0
+  randomObjectsCount: 100
   randomObjectPrefab: {fileID: 8911605071967452023, guid: 36720ffaee141754c973f0000b38fb9f, type: 3}
   randomObjectsContainer: {fileID: 1257631286}
-  delay: 0
+  delay: 5
+  isMotionUpdated: 1
+  speed: 5
 --- !u!1001 &3711780945569357969
 PrefabInstance:
   m_ObjectHideFlags: 0

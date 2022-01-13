@@ -8,19 +8,19 @@ namespace SpatialPartitionSystem
 {
     public class QuadtreeController : MonoBehaviour
     {
-        [Header("Quadtree parameters")]
+        [Header("Quadtree Settings")]
         [SerializeField] private Bounds bounds = new Bounds();
         [SerializeField, Range(1, 8)] private int maxObjects = 4;
         [SerializeField, Range(1, 16)] private int maxDepth = 8;
 
         [Space]
-        [SerializeField] private Bounds queryBoundary = new Bounds();
+        [SerializeField] private Bounds queryBounds = new Bounds();
         [SerializeField] private Color queryBoundaryColor = Color.green;
         
-        [Space]
+        [Header("Spawn Object Settings")]
         [SerializeField] private SpatialGameObject[] storedObjects;
         [SerializeField] private bool isRandomObjectsAdded = false;
-        [SerializeField, Range(1, 50)] private int randomObjectsCount = 10;
+        [SerializeField, Range(1, 100)] private int randomObjectsCount = 10;
         
         [Space]
         [SerializeField] private SpatialGameObject randomObjectPrefab;
@@ -29,21 +29,27 @@ namespace SpatialPartitionSystem
         [Space]
         [SerializeField, Range(0f, 5f)] private float delay = 2f;
 
+        [Header("Motion Object Settings")]
+        [SerializeField] private bool isMotionUpdated = false;
+        [SerializeField, Range(0.1f, 10f)] private float speed = 1f;
+
         private List<SpatialGameObject> quadtreeStoredObjects = new List<SpatialGameObject>(capacity: 100);
         private Quadtree<SpatialGameObject> quadtree;
+
+        private Vector3[] objVelocities;
 
         private void OnDrawGizmos()
         {
             Gizmos.color = queryBoundaryColor;
-            Gizmos.DrawCube(queryBoundary.center, queryBoundary.size);
+            Gizmos.DrawCube(queryBounds.center, queryBounds.size);
 
             if (quadtree == null)
             {
                 Gizmos.DrawWireCube(bounds.center, bounds.size);
                 return;
             }
-
-            var queryObjects = quadtree.Query(queryBoundary);
+            
+            var queryObjects = quadtree.Query(queryBounds, quadtreeStoredObjects.Count);
             
             if (queryObjects != null)
             {
@@ -83,6 +89,8 @@ namespace SpatialPartitionSystem
 
         private IEnumerator AddRandomObjectsCoroutine()
         {
+            InitObjVelocities(randomObjectsCount);
+            
             for (int i = 0; i < randomObjectsCount; i++)
             {
                 float randomX = Random.Range(bounds.min.x, bounds.max.x);
@@ -103,12 +111,15 @@ namespace SpatialPartitionSystem
                 Debug.Log($"Object \'{instance.name}\' was added!");
                 Debug.Log($"************************************");
             }
-            
-            StartCoroutine(RemoveObjectsCoroutine());
+
+            // ClearQuadtree();
+            // StartCoroutine(RemoveObjectsCoroutine());
         }
         
         private IEnumerator AddStoredObjectsCoroutine()
         {
+            InitObjVelocities(storedObjects.Length);
+            
             for (int i = 0; i < storedObjects.Length; i++)
             {
                 var target = storedObjects[i];
@@ -117,7 +128,6 @@ namespace SpatialPartitionSystem
                 
                 quadtree.TryAdd(target);
                 quadtreeStoredObjects.Add(target);
-
 
                 target.gameObject.SetActive(true);
                 Debug.Log($"Object \'{target.name}\' was added!");
@@ -130,6 +140,59 @@ namespace SpatialPartitionSystem
         private void Update()
         {
             quadtree.DebugDraw(true);
+            
+            // for (int i = 0; i < quadtreeStoredObjects.Count; i++)
+            // {
+            //     if (isMotionUpdated)
+            //     {
+            //         UpdatePositionFor(i);
+            //     }
+            //     
+            //     quadtree.Update(quadtreeStoredObjects[i]);
+            // }
+        }
+
+        private void UpdatePositionFor(int index)
+        {
+            var objTransform = quadtreeStoredObjects[index].transform;
+            var objVelocity = objVelocities[index];
+
+            objTransform.position += objVelocity * Time.deltaTime;
+            UpdateVelocityFor(objTransform, index);
+        }
+
+        private void UpdateVelocityFor(Transform objTransform, int index)
+        {
+            var objVelocity = objVelocities[index];
+            var objPosition = objTransform.position;
+            
+            if (objTransform.position.x > bounds.max.x || objTransform.position.x < bounds.min.x)
+            {
+                objPosition.x = Mathf.Clamp(objTransform.position.x, bounds.min.x, bounds.max.x);
+                objVelocity.x = -objVelocity.x;
+            }
+            
+            if (objTransform.position.y > bounds.max.y || objTransform.position.y < bounds.min.y)
+            {
+                objPosition.y = Mathf.Clamp(objTransform.position.y, bounds.min.y, bounds.max.y);
+                objVelocity.y = -objVelocity.y;
+            }
+
+            objTransform.position = objPosition;
+            objVelocities[index] = speed * objVelocity.normalized;
+        }
+
+        private void InitObjVelocities(int count)
+        {
+            objVelocities = new Vector3[count];
+
+            for (int i = 0; i < count; i++)
+            {
+                var dir = Random.onUnitSphere;
+                dir.z = 0f;
+
+                objVelocities[i] = speed * dir;
+            }
         }
 
         private IEnumerator RemoveObjectsCoroutine()
@@ -146,8 +209,18 @@ namespace SpatialPartitionSystem
                 Debug.Log($"Object \'{removedObject.name}\' was removed!");
                 Debug.Log($"************************************");
             }
-
+            
             quadtreeStoredObjects.Clear();
+        }
+
+        private void ClearQuadtree()
+        {
+            foreach (var removedObject in quadtreeStoredObjects)
+            {
+                removedObject.gameObject.SetActive(false);
+            }
+
+            quadtree.Clear();
         }
     }
 }
