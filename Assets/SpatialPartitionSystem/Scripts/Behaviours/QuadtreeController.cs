@@ -127,7 +127,7 @@ namespace SpatialPartitionSystem.Behaviours
                 Debug.Log($"************************************");
             }
             
-            // StartCoroutine(RemoveObjectsCoroutine());
+            StartCoroutine(RemoveObjectsCoroutine());
         }
 
         private void Update()
@@ -198,7 +198,7 @@ namespace SpatialPartitionSystem.Behaviours
                 
                 _quadtree.TryRemove(removedObject);
                 
-                removedObject.gameObject.SetActive(false);
+                // removedObject.gameObject.SetActive(false);
                 Debug.Log($"Object \'{removedObject.name}\' was removed!");
                 Debug.Log($"************************************");
             }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Assertions;
 
@@ -7,6 +8,8 @@ namespace SpatialPartitionSystem.Core
 {
     public abstract class SpatialTree<TObject> where TObject : class, ISpatialObject
     {
+        public int Count { get; private set; } = 0;
+
         protected abstract Dictionary<int, Func<Vector3, Vector3, Vector3>> QuadrantOrientationMap { get; }
 
         private readonly int _maxObjects = 0, _maxDepth = 0;
@@ -106,7 +109,6 @@ namespace SpatialPartitionSystem.Core
                 out Node<TObject> parentSmallestNode
             ) == false)
             {
-                TryAdd(obj, _root, 0);
                 return;
             }
             
@@ -145,6 +147,26 @@ namespace SpatialPartitionSystem.Core
         }
         
         /// <summary>
+        /// Get all read only nodes of the tree.
+        /// </summary>
+        /// <returns></returns>
+        public IReadOnlyList<IReadOnlyNode<TObject>> GetAllNodes()
+        {
+            return GetSubtreeFor(_root);
+        }
+
+        /// <summary>
+        /// Get read only nodes of the tree for a given depth.
+        /// </summary>
+        /// <param name="depth"></param>
+        /// <returns></returns>
+        public IReadOnlyList<IReadOnlyNode<TObject>> GetNodesFor(int depth)
+        {
+            depth = Mathf.Clamp(depth, 0, _maxDepth);
+            return GetChildrensForDepth(_root, 0, depth);
+        }
+
+        /// <summary>
         /// Returns an enumerable which iterates over all objects overlapping the given bounds.
         /// </summary>
         /// <param name="bounds">The bounds to check.</param>
@@ -155,43 +177,6 @@ namespace SpatialPartitionSystem.Core
             return Query(_root, bounds, maxQueryObjects);
         }
 
-        private IEnumerable<TObject> Query(Node<TObject> node, Bounds queryBounds, int maxQueryObjects)
-        {
-            if (node.Bounds.Intersects(queryBounds) == false)
-            {
-                return null;
-            }
-            
-            var queryObjects = new List<TObject>(capacity: maxQueryObjects);
-            
-            if (node.IsLeaf)
-            {
-                for (int i = 0; i < node.Objects.Count; i++)
-                {
-                    if (queryBounds.Intersects(node.Objects[i].Bounds))
-                    {
-                        queryObjects.Add(node.Objects[i]);
-                    }
-                }
-            }
-            else
-            {
-                for (int i = 0; i < node.Childrens.Length; i++)
-                {
-                    var childQueryObjects = Query(node.Childrens[i], queryBounds, (int) 0.5f * maxQueryObjects);
-                    
-                    if (childQueryObjects == null)
-                    {
-                        continue;
-                    }
-                        
-                    queryObjects.AddRange(childQueryObjects);
-                }
-            }
-
-            return queryObjects;
-        }
-        
         private bool TryAdd(TObject obj, Node<TObject> node, int depth)
         {
             if (node.Bounds.Intersects(obj.Bounds) == false)
@@ -204,6 +189,7 @@ namespace SpatialPartitionSystem.Core
                 if (depth >= _maxDepth || node.Objects.Count < _maxObjects)
                 {
                     node.Objects.Add(obj);
+                    Count++;
                 }
                 else
                 {
@@ -251,6 +237,11 @@ namespace SpatialPartitionSystem.Core
             if (node.IsLeaf)
             {
                 bool isRemoved = node.Objects.Remove(obj);
+                if (isRemoved)
+                {
+                    Count--;
+                }
+                
                 return isRemoved;
             }
             
@@ -315,6 +306,43 @@ namespace SpatialPartitionSystem.Core
             return true;
         }
         
+        private IEnumerable<TObject> Query(Node<TObject> node, Bounds queryBounds, int maxQueryObjects)
+        {
+            if (node.Bounds.Intersects(queryBounds) == false)
+            {
+                return null;
+            }
+            
+            var queryObjects = new List<TObject>(capacity: maxQueryObjects);
+            
+            if (node.IsLeaf)
+            {
+                for (int i = 0; i < node.Objects.Count; i++)
+                {
+                    if (queryBounds.Intersects(node.Objects[i].Bounds))
+                    {
+                        queryObjects.Add(node.Objects[i]);
+                    }
+                }
+            }
+            else
+            {
+                for (int i = 0; i < node.Childrens.Length; i++)
+                {
+                    var childQueryObjects = Query(node.Childrens[i], queryBounds, (int) 0.5f * maxQueryObjects);
+                    
+                    if (childQueryObjects == null)
+                    {
+                        continue;
+                    }
+                        
+                    queryObjects.AddRange(childQueryObjects);
+                }
+            }
+
+            return queryObjects;
+        }
+        
         private bool TryGetSmallestNodeRelativeFor(TObject obj, Node<TObject> relativeNode, Node<TObject> parentRelativeNode, out Node<TObject> smallestNode, out Node<TObject> parentSmallestNode)
         {
             if (relativeNode.IsLeaf)
@@ -345,6 +373,52 @@ namespace SpatialPartitionSystem.Core
             smallestNode = null;
             parentSmallestNode = null;
             return false;
+        }
+        
+        private List<Node<TObject>> GetChildrensForDepth(Node<TObject> node, int actualDepth, int requiredDepth)
+        {
+            if (node.IsLeaf == false)
+            {
+                int parentRequiredDepth = requiredDepth - 1;
+                if (actualDepth == parentRequiredDepth)
+                {
+                    return node.Childrens.ToList();
+                }
+
+                for (int i = 0; i < node.Childrens.Length; i++)
+                {
+                    var childrens = GetChildrensForDepth(node.Childrens[i], actualDepth + 1, requiredDepth);
+
+                    if (childrens != null)
+                    {
+                        return childrens;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private List<Node<TObject>> GetSubtreeFor(Node<TObject> node)
+        {
+            Assert.IsNotNull(node);
+            var subtree = new HashSet<Node<TObject>> { node };
+
+            if (node.IsLeaf == false)
+            {
+                for (int i = 0; i < node.Childrens.Length; i++)
+                {
+                    subtree.Add(node.Childrens[i]);
+                    var childSubtree = GetSubtreeFor(node.Childrens[i]);
+
+                    for (int j = 0; j < childSubtree.Count; j++)
+                    {
+                        subtree.Add(childSubtree[j]);
+                    }
+                }
+            }
+            
+            return subtree.ToList();
         }
     }
 }

@@ -1560,7 +1560,7 @@ MonoBehaviour:
   randomObjectsCount: 100
   randomObjectPrefab: {fileID: 8911605071967452023, guid: 36720ffaee141754c973f0000b38fb9f, type: 3}
   randomObjectsContainer: {fileID: 1257631286}
-  delay: 0.1
+  delay: 1
   isMotionUpdated: 1
   speed: 5
 --- !u!1001 &3711780945569357969
