@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
 
-namespace SpatialPartitionSystem
+namespace SpatialPartitionSystem.Core
 {
     public abstract class SpatialTree<TObject> where TObject : class, ISpatialObject
     {

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace SpatialPartitionSystem
+namespace SpatialPartitionSystem.Core
 {
     public sealed class Octree<TObject> : SpatialTree<TObject>
         where TObject : class, ISpatialObject

@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Random = UnityEngine.Random;
+using SpatialPartitionSystem.Core;
 
-namespace SpatialPartitionSystem
+namespace SpatialPartitionSystem.Behaviours
 {
     public class OctreeController : MonoBehaviour
     {

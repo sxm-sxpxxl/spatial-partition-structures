@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-namespace SpatialPartitionSystem
+namespace SpatialPartitionSystem.Core
 {
-    public class Node<TObject> where TObject : class
+    public sealed class Node<TObject> where TObject : class
     {
         public Node<TObject>[] Childrens;
         public readonly List<TObject> Objects;

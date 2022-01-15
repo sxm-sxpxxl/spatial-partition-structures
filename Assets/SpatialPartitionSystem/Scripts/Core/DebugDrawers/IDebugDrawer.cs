@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace SpatialPartitionSystem
+namespace SpatialPartitionSystem.Core
 {
     public interface IDebugDrawer
     {

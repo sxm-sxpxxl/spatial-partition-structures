@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
+using SpatialPartitionSystem.Core;
 
-namespace SpatialPartitionSystem
+namespace SpatialPartitionSystem.Behaviours
 {
     public sealed class SpatialGameObject : MonoBehaviour, ISpatialObject
     {
