@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using Random = UnityEngine.Random;
+using SpatialPartitionSystem.Core;
 
 namespace SpatialPartitionSystem.Behaviours
 {
@@ -20,7 +21,7 @@ namespace SpatialPartitionSystem.Behaviours
         [Space]
         [SerializeField] UnityEvent<SpatialGameObject> onObjectCreated = new UnityEvent<SpatialGameObject>();
         
-        private List<SpatialGameObject> _objects = new List<SpatialGameObject>(capacity: 100);
+        private readonly List<SpatialGameObject> _objects = new List<SpatialGameObject>(capacity: 100);
 
         private void Start()
         {
@@ -40,20 +41,21 @@ namespace SpatialPartitionSystem.Behaviours
                 float randomY = Random.Range(min.y, max.y);
                 float randomZ = Random.Range(min.z, max.z);
 
-                var instance = Instantiate(objectPrefab, objectsContainer.transform.localPosition + new Vector3(randomX, randomY, randomZ), Quaternion.identity, objectsContainer);
+                var instance = Instantiate(
+                    objectPrefab,
+                    transform.TransformPoint(new Vector3(randomX, randomY, randomZ)),
+                    objectPrefab.transform.rotation,
+                    objectsContainer
+                );
                 instance.name = instance.name + $" ({i})";
                 instance.gameObject.SetActive(false);
                 
-                Debug.Log($"Adding \'{instance.name}\' random object...");
                 yield return new WaitForSeconds(creationDelay);
                 
                 _objects.Add(instance);
                 onObjectCreated.Invoke(instance);
                 
                 instance.gameObject.SetActive(true);
-                
-                Debug.Log($"Object \'{instance.name}\' was added!");
-                Debug.Log($"************************************");
             }
         }
         

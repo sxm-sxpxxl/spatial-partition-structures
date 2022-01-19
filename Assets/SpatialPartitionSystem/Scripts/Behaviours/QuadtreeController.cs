@@ -13,15 +13,13 @@ namespace SpatialPartitionSystem.Behaviours
         [SerializeField, Range(1, 8)] private int maxObjects = 4;
         [SerializeField, Range(1, 16)] private int maxDepth = 8;
         
-        [Space]
-        [SerializeField] private PlaneOrientation planeOrientation = PlaneOrientation.XY;
-
         private Quadtree<TwoDimensionalSpatialGameObject> _quadtree;
+        private TwoDimensionalSpatialGameObject _rootSpatialObject;
 
         private void Awake()
         {
-            var rawBounds = GetComponent<TwoDimensionalSpatialGameObject>().RawBounds;
-            _quadtree = new Quadtree<TwoDimensionalSpatialGameObject>(rawBounds, maxObjects, maxDepth, planeOrientation);
+            _rootSpatialObject = GetComponent<TwoDimensionalSpatialGameObject>();
+            _quadtree = new Quadtree<TwoDimensionalSpatialGameObject>(_rootSpatialObject.Bounds, maxObjects, maxDepth);
         }
 
         private void OnDrawGizmos()
@@ -31,25 +29,22 @@ namespace SpatialPartitionSystem.Behaviours
                 return;
             }
             
-            _quadtree.DebugDraw(localOffset: transform.position);
+            _quadtree.DebugDraw(relativeTransform: transform);
         }
 
         public void AddObject(SpatialGameObject obj)
         {
-            var actualObj = obj as TwoDimensionalSpatialGameObject;
-            _quadtree.TryAdd(actualObj);
+            _quadtree.TryAdd(obj as TwoDimensionalSpatialGameObject);
         }
 
         public void UpdateObject(SpatialGameObject obj)
         {
-            var actualObj = obj as TwoDimensionalSpatialGameObject;
-            _quadtree.Update(actualObj);
+            _quadtree.Update(obj as TwoDimensionalSpatialGameObject);
         }
 
         public void RemoveObject(SpatialGameObject obj)
         {
-            var actualObj = obj as TwoDimensionalSpatialGameObject;
-            _quadtree.TryRemove(actualObj);
+            _quadtree.TryRemove(obj as TwoDimensionalSpatialGameObject);
         }
     }
 }

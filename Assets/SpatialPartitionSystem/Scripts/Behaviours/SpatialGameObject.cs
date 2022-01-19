@@ -6,23 +6,26 @@ namespace SpatialPartitionSystem.Behaviours
     public abstract class SpatialGameObject<TBounds> : SpatialGameObject, ISpatialObject<TBounds>
         where TBounds : struct
     {
-        public abstract TBounds RawBounds { get; }
-        public abstract TBounds Bounds { get; }
-
         [SerializeField] private Color boundsColor = Color.green;
+        
+        public abstract TBounds Bounds { get; }
+        
+        public abstract TBounds LocalBounds { get; }
 
-        protected abstract Vector3 GlobalBoundsCenter { get; }
+        protected abstract Vector3 WorldBoundsCenter { get; }
+        
+        protected abstract Vector3 WorldBoundsSize { get; }
 
         private void OnDrawGizmos()
         {
             Gizmos.color = boundsColor;
-            Gizmos.DrawWireCube(GlobalBoundsCenter, BoundsSize);
+            Gizmos.DrawWireCube(WorldBoundsCenter, WorldBoundsSize);
         }
     }
 
     public abstract class SpatialGameObject : MonoBehaviour
     {
-        public abstract Vector3 BoundsCenter { get; }
+        public abstract Vector3 LocalBoundsCenter { get; }
 
         public abstract Vector3 BoundsSize { get; }
 

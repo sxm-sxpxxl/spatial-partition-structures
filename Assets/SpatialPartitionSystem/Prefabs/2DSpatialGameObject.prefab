@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3711780944974721904}
-  - component: {fileID: 8234744001166578577}
+  - component: {fileID: 8200283126356758808}
   - component: {fileID: 8861645927252954752}
   m_Layer: 0
   m_Name: 2DSpatialGameObject
@@ -25,14 +25,14 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3711780944974721868}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!212 &8234744001166578577
+--- !u!212 &8200283126356758808
 SpriteRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -102,3 +102,4 @@ MonoBehaviour:
     y: -0.1
     width: 0.2
     height: 0.2
+  planeOrientation: 1

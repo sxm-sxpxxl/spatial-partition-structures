@@ -8,11 +8,11 @@ namespace SpatialPartitionSystem.Tests {
     {
         private class TestSpatialObject : ISpatialObject<Rect>
         {
-            public Rect Bounds { get; set; }
+            public Rect LocalBounds { get; set; }
 
             public TestSpatialObject(Rect bounds)
             {
-                Bounds = bounds;
+                LocalBounds = bounds;
             }
         }
     
@@ -208,7 +208,7 @@ namespace SpatialPartitionSystem.Tests {
             var childNodes = tree.GetNodesFor(1);
             Assert.IsTrue(childNodes[0].Objects.Contains(testObj1));
             
-            testObj1.Bounds = new Rect(treeBounds.center + new Vector2(-topRightOffset.x, topRightOffset.y), objBoundsSize);
+            testObj1.LocalBounds = new Rect(treeBounds.center + new Vector2(-topRightOffset.x, topRightOffset.y), objBoundsSize);
             tree.Update(testObj1);
 
             // Check that the object is located in the tree in accordance with new position of its bounds

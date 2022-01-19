@@ -10,7 +10,7 @@ namespace SpatialPartitionSystem.Core
         where TObject : class, ISpatialObject<TBounds>
         where TBounds : struct
     {
-        public int Count { get; private set; } = 0;
+        public int Count => Query(_root, _root.Bounds, 100).ToArray().Length;
         public int MaxObjects => _maxObjects;
         public int MaxDepth => _maxDepth;
 
@@ -20,6 +20,7 @@ namespace SpatialPartitionSystem.Core
 
         private readonly int _maxObjects = 0, _maxDepth = 0;
         internal readonly Node<TObject, TBounds> _root;
+        private readonly List<TObject> _missingObjects = new List<TObject>(capacity: 100);
 
         /// <summary>
         /// Constructs a new tree with given settings.
@@ -53,8 +54,9 @@ namespace SpatialPartitionSystem.Core
         /// Draws the bounds of the tree using Debug.DrawLine if playmode only setting is true or Gizmos.DrawLine if not.
         /// </summary>
         /// <param name="isPlaymodeOnly">The playmode only setting.</param>
-        public void DebugDraw(bool isPlaymodeOnly = false, Vector3 localOffset = default(Vector3))
+        public void DebugDraw(Transform relativeTransform, bool isPlaymodeOnly = false)
         {
+            Assert.IsNotNull(relativeTransform);
             var drawer = isPlaymodeOnly ? (IDebugDrawer) new PlaymodeOnlyDebugDrawer() : new GizmosDebugDrawer();
 
             void DrawNestedBounds(Node<TObject, TBounds> node)
@@ -66,7 +68,11 @@ namespace SpatialPartitionSystem.Core
                         : Color.blue;
 
                 drawer.SetColor(busyColor);
-                drawer.DrawWireCube(localOffset + GetBoundsCenter(node.Bounds), GetBoundsSize(node.Bounds));
+
+                var worldCenter = relativeTransform.TransformPoint(GetBoundsCenter(node.Bounds));
+                var worldSize = relativeTransform.TransformDirection(GetBoundsSize(node.Bounds));
+                
+                drawer.DrawWireCube(worldCenter, worldSize);
 
                 if (node.Childrens == null)
                 {
@@ -81,7 +87,7 @@ namespace SpatialPartitionSystem.Core
 
             DrawNestedBounds(_root);
         }
-
+        
         /// <summary>
         /// Tries to add the object to the tree.
         /// If the object doesn't intersect with the bounds of the tree then the object won't be added.
@@ -130,13 +136,25 @@ namespace SpatialPartitionSystem.Core
                 out Node<TObject, TBounds> parentSmallestNode
             ) == false)
             {
+                TObject missiongObject = _missingObjects.Find(x => x == obj);
+
+                if (missiongObject != null && TryAdd(missiongObject))
+                {
+                    _missingObjects.Remove(missiongObject);
+                }
+                
                 return;
             }
             
-            if (Intersects(smallestNode.Bounds, obj.Bounds) == false)
+            if (Intersects(smallestNode.Bounds, obj.LocalBounds) == false)
             {
-                TryRemove(obj, smallestNode);
-                TryAdd(obj, _root, 0);
+                bool isRemoved = TryRemove(obj, smallestNode);
+                bool isAdded = TryAdd(obj, _root, 0);
+
+                if (isRemoved && isAdded == false)
+                {
+                    _missingObjects.Add(obj);
+                }
             }
             else
             {
@@ -190,7 +208,7 @@ namespace SpatialPartitionSystem.Core
 
         private bool TryAdd(TObject obj, Node<TObject, TBounds> node, int depth)
         {
-            if (Intersects(node.Bounds, obj.Bounds) == false)
+            if (Intersects(node.Bounds, obj.LocalBounds) == false)
             {
                 return false;
             }
@@ -200,7 +218,6 @@ namespace SpatialPartitionSystem.Core
                 if (depth >= _maxDepth || node.Objects.Count < _maxObjects)
                 {
                     node.Objects.Add(obj);
-                    Count++;
                 }
                 else
                 {
@@ -248,11 +265,6 @@ namespace SpatialPartitionSystem.Core
             if (node.IsLeaf)
             {
                 bool isRemoved = node.Objects.Remove(obj);
-                if (isRemoved)
-                {
-                    Count--;
-                }
-                
                 return isRemoved;
             }
             
@@ -330,7 +342,7 @@ namespace SpatialPartitionSystem.Core
             {
                 for (int i = 0; i < node.Objects.Count; i++)
                 {
-                    if (Intersects(node.Objects[i].Bounds, queryBounds))
+                    if (Intersects(node.Objects[i].LocalBounds, queryBounds))
                     {
                         queryObjects.Add(node.Objects[i]);
                     }

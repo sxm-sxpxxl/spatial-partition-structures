@@ -1,6 +1,6 @@
 ﻿using System;
-using SpatialPartitionSystem.Core;
 using UnityEngine;
+using SpatialPartitionSystem.Core;
 
 namespace SpatialPartitionSystem.Behaviours
 {
@@ -19,31 +19,28 @@ namespace SpatialPartitionSystem.Behaviours
                 return;
             }
             
-            _octree.DebugDraw(localOffset: transform.position);
+            _octree.DebugDraw(relativeTransform: transform);
         }
 
         private void Awake()
         {
-            var rawBounds = GetComponent<ThreeDimensionalSpatialGameObject>().RawBounds;
+            var rawBounds = GetComponent<ThreeDimensionalSpatialGameObject>().Bounds;
             _octree = new Octree<ThreeDimensionalSpatialGameObject>(rawBounds, maxObjects, maxDepth);
         }
 
         public void AddObject(SpatialGameObject obj)
         {
-            var actualObj = obj as ThreeDimensionalSpatialGameObject;
-            _octree.TryAdd(actualObj);
+            _octree.TryAdd(obj as ThreeDimensionalSpatialGameObject);
         }
 
         public void UpdateObject(SpatialGameObject obj)
         {
-            var actualObj = obj as ThreeDimensionalSpatialGameObject;
-            _octree.Update(actualObj);
+            _octree.Update(obj as ThreeDimensionalSpatialGameObject);
         }
 
         public void RemoveObject(SpatialGameObject obj)
         {
-            var actualObj = obj as ThreeDimensionalSpatialGameObject;
-            _octree.TryRemove(actualObj);
+            _octree.TryRemove(obj as ThreeDimensionalSpatialGameObject);
         }
     }
 }

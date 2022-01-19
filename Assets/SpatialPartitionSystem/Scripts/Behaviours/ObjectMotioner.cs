@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using Random = UnityEngine.Random;
+using SpatialPartitionSystem.Core;
 
 namespace SpatialPartitionSystem.Behaviours
 {
@@ -15,8 +16,8 @@ namespace SpatialPartitionSystem.Behaviours
         [Space]
         [SerializeField] private UnityEvent<SpatialGameObject> onObjectUpdated = new UnityEvent<SpatialGameObject>();
         
-        private SpatialGameObject rootSpatialObject;
-        private List<MobileObject> _objects = new List<MobileObject>(capacity: 100);
+        private SpatialGameObject _rootSpatialObject;
+        private readonly List<MobileObject> _objects = new List<MobileObject>(capacity: 100);
 
         private Vector3 InitialVelocity
         {
@@ -24,7 +25,7 @@ namespace SpatialPartitionSystem.Behaviours
             {
                 Vector3 direction = Random.onUnitSphere;
 
-                if (rootSpatialObject is TwoDimensionalSpatialGameObject)
+                if (_rootSpatialObject is TwoDimensionalSpatialGameObject)
                 {
                     direction.z = 0f;
                 }
@@ -41,7 +42,7 @@ namespace SpatialPartitionSystem.Behaviours
         
         private void Awake()
         {
-            rootSpatialObject = GetComponent<SpatialGameObject>();
+            _rootSpatialObject = GetComponent<SpatialGameObject>();
         }
 
         private void Update()
@@ -53,7 +54,7 @@ namespace SpatialPartitionSystem.Behaviours
             
             for (int i = 0; i < _objects.Count; i++)
             {
-                UpdatePositionFor(i);
+                UpdatePositionFor(_objects[i]);
                 onObjectUpdated.Invoke(_objects[i].target);
             }
         }
@@ -63,45 +64,42 @@ namespace SpatialPartitionSystem.Behaviours
             _objects.Add(new MobileObject { target = obj, velocity = InitialVelocity });
         }
 
-        private void UpdatePositionFor(int index)
+        private void UpdatePositionFor(MobileObject obj)
         {
-            var objTransform = _objects[index].target.transform;
-            var objVelocity = _objects[index].velocity;
-
-            objTransform.position += objVelocity * Time.deltaTime;
-            UpdateVelocityFor(index);
-        }
-        
-        private void UpdateVelocityFor(int index)
-        {
-            var objVelocity = _objects[index].velocity;
-            var objTransform = _objects[index].target.transform;
+            var objTransform = obj.target.transform;
+            var objPosition = objTransform.localPosition;
             
-            var resultObjPosition = objTransform.position;
+            var resultObjVelocity = obj.velocity;
 
-            Vector3 min = rootSpatialObject.BoundsMin;
-            Vector3 max = rootSpatialObject.BoundsMax;
+            Vector3 min = _rootSpatialObject.BoundsMin;
+            Vector3 max = _rootSpatialObject.BoundsMax;
             
-            if (objTransform.position.x > max.x || objTransform.position.x < min.x)
+            if (objPosition.x > max.x || objPosition.x < min.x)
             {
-                resultObjPosition.x = Mathf.Clamp(objTransform.position.x, min.x, max.x);
-                objVelocity.x = -objVelocity.x;
+                objPosition.x = Mathf.Clamp(objPosition.x, min.x, max.x);
+                resultObjVelocity.x = -resultObjVelocity.x;
             }
             
-            if (objTransform.position.y > max.y || objTransform.position.y < min.y)
+            if (objPosition.y > max.y  || objPosition.y < min.y)
             {
-                resultObjPosition.y = Mathf.Clamp(objTransform.position.y, min.y, max.y);
-                objVelocity.y = -objVelocity.y;
+                objPosition.y = Mathf.Clamp(objPosition.y, min.y, max.y);
+                resultObjVelocity.y = -resultObjVelocity.y;
             }
 
-            if (objTransform.position.z > max.z || objTransform.position.z < min.z)
+            if (_rootSpatialObject is ThreeDimensionalSpatialGameObject)
             {
-                resultObjPosition.z = Mathf.Clamp(objTransform.position.z, min.z, max.z);
-                objVelocity.z = -objVelocity.z;
+                if (objPosition.z > max.z || objPosition.z < min.z)
+                {
+                    objPosition.z = Mathf.Clamp(objPosition.z, min.z, max.z);
+                    resultObjVelocity.z = -resultObjVelocity.z;
+                }                
             }
 
-            objTransform.position = resultObjPosition;
-            _objects[index].velocity = speed * objVelocity.normalized;
+            resultObjVelocity = speed * resultObjVelocity.normalized;
+            objPosition += resultObjVelocity * Time.deltaTime;
+
+            obj.velocity = resultObjVelocity;
+            obj.target.transform.localPosition = objPosition;
         }
     }
 }

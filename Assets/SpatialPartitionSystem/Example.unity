@@ -268,7 +268,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 477752264f5640d7a97c615bc91587b8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxObjects: 4
+  maxObjects: 2
   maxDepth: 8
 --- !u!114 &1100641115
 MonoBehaviour:
@@ -282,7 +282,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75d883ea478b45079da3b8f3767c3756, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isMotionUpdated: 1
+  isMotionUpdated: 0
   speed: 1
   onObjectUpdated:
     m_PersistentCalls:
@@ -369,7 +369,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1100641113}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 5, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 2090531245}
@@ -408,9 +408,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 36b9b542b38144c88ce2a30dac5a5ab3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxObjects: 4
+  maxObjects: 2
   maxDepth: 8
-  planeOrientation: 0
 --- !u!4 &1265600771
 Transform:
   m_ObjectHideFlags: 0
@@ -418,8 +417,8 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1265600769}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 0, y: 5, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 682947789}
@@ -438,7 +437,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35b4ba084f184d659b21c07853d709d8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  objectsCount: 10
+  objectsCount: 5
   creationDelay: 0.1
   objectPrefab: {fileID: 8861645927252954752, guid: 11123b84ba285eb47a60381e35e14469, type: 3}
   objectsContainer: {fileID: 682947789}
@@ -490,6 +489,7 @@ MonoBehaviour:
     y: -2
     width: 4
     height: 4
+  planeOrientation: 1
 --- !u!114 &1265600774
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -502,8 +502,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75d883ea478b45079da3b8f3767c3756, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isMotionUpdated: 1
-  speed: 1
+  isMotionUpdated: 0
+  speed: 6.1
   onObjectUpdated:
     m_PersistentCalls:
       m_Calls:
