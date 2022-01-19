@@ -2,7 +2,7 @@
 
 namespace SpatialPartitionSystem.Core
 {
-    public sealed class GizmosDebugDrawer : IDebugDrawer
+    internal sealed class GizmosDebugDrawer : IDebugDrawer
     {
         public void SetColor(Color color)
         {

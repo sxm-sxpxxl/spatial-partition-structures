@@ -2,7 +2,7 @@
 
 namespace SpatialPartitionSystem.Core
 {
-    public class PlaymodeOnlyDebugDrawer : IDebugDrawer
+    internal class PlaymodeOnlyDebugDrawer : IDebugDrawer
     {
         private Color _color = Color.white;
         

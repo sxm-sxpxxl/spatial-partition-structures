@@ -2,8 +2,8 @@
 
 namespace SpatialPartitionSystem.Core
 {
-    public interface ISpatialObject
+    public interface ISpatialObject<TBounds> where TBounds : struct
     {
-        Bounds Bounds { get; }
+        TBounds Bounds { get; }
     }
 }

@@ -6,14 +6,20 @@ using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core
 {
-    public abstract class SpatialTree<TObject> where TObject : class, ISpatialObject
+    public abstract class SpatialTree<TObject, TBounds>
+        where TObject : class, ISpatialObject<TBounds>
+        where TBounds : struct
     {
         public int Count { get; private set; } = 0;
+        public int MaxObjects => _maxObjects;
+        public int MaxDepth => _maxDepth;
 
         protected abstract Dictionary<int, Func<Vector3, Vector3, Vector3>> QuadrantOrientationMap { get; }
+        
+        private const int MAX_POSSIBLE_DEPTH = 16, MAX_POSSIBLE_OBJECTS = 8;
 
         private readonly int _maxObjects = 0, _maxDepth = 0;
-        private readonly Node<TObject> _root;
+        internal readonly Node<TObject, TBounds> _root;
 
         /// <summary>
         /// Constructs a new tree with given settings.
@@ -21,22 +27,37 @@ namespace SpatialPartitionSystem.Core
         /// <param name="bounds">The bounds of the tree.</param>
         /// <param name="maxObjects">The maximum number of objects per node.</param>
         /// <param name="maxDepth">The maximum depth of the tree.</param>
-        protected SpatialTree(Bounds bounds, int maxObjects, int maxDepth)
+        protected SpatialTree(TBounds bounds, int maxObjects, int maxDepth)
         {
-            _root = new Node<TObject>(bounds, maxObjects);
-            _maxObjects = maxObjects;
-            _maxDepth = maxDepth;
+            _root = new Node<TObject, TBounds>(bounds, maxObjects);
+            _maxObjects = Mathf.Clamp(maxObjects, 0, MAX_POSSIBLE_OBJECTS);
+            _maxDepth = Mathf.Clamp(maxDepth, 0, MAX_POSSIBLE_DEPTH);
         }
+
+        /// <summary>
+        /// Whether the bounds are completely inside the tree or not.
+        /// </summary>
+        /// <param name="bounds"></param>
+        /// <returns></returns>
+        public abstract bool Contains(TBounds bounds);
         
+        protected abstract bool Intersects(TBounds a, TBounds b);
+
+        protected abstract Vector3 GetBoundsCenter(TBounds bounds);
+        
+        protected abstract Vector3 GetBoundsSize(TBounds bounds);
+
+        protected abstract TBounds CreateBounds(Vector3 center, Vector3 size);
+
         /// <summary>
         /// Draws the bounds of the tree using Debug.DrawLine if playmode only setting is true or Gizmos.DrawLine if not.
         /// </summary>
         /// <param name="isPlaymodeOnly">The playmode only setting.</param>
-        public void DebugDraw(bool isPlaymodeOnly = false)
+        public void DebugDraw(bool isPlaymodeOnly = false, Vector3 localOffset = default(Vector3))
         {
             var drawer = isPlaymodeOnly ? (IDebugDrawer) new PlaymodeOnlyDebugDrawer() : new GizmosDebugDrawer();
 
-            void DrawNestedBounds(Node<TObject> node)
+            void DrawNestedBounds(Node<TObject, TBounds> node)
             {
                 var busyColor = node.Objects.Count == 0
                     ? Color.green
@@ -45,7 +66,7 @@ namespace SpatialPartitionSystem.Core
                         : Color.blue;
 
                 drawer.SetColor(busyColor);
-                drawer.DrawWireCube(node.Bounds.center, node.Bounds.size);
+                drawer.DrawWireCube(localOffset + GetBoundsCenter(node.Bounds), GetBoundsSize(node.Bounds));
 
                 if (node.Childrens == null)
                 {
@@ -60,7 +81,7 @@ namespace SpatialPartitionSystem.Core
 
             DrawNestedBounds(_root);
         }
-        
+
         /// <summary>
         /// Tries to add the object to the tree.
         /// If the object doesn't intersect with the bounds of the tree then the object won't be added.
@@ -92,7 +113,7 @@ namespace SpatialPartitionSystem.Core
             _root.Childrens = null;
             _root.Objects.Clear();
         }
-        
+
         /// <summary>
         /// Updates the object's location in the tree if its bounds have changed.
         /// </summary>
@@ -105,14 +126,14 @@ namespace SpatialPartitionSystem.Core
                 obj,
                 _root,
                 null,
-                out Node<TObject> smallestNode,
-                out Node<TObject> parentSmallestNode
+                out Node<TObject, TBounds> smallestNode,
+                out Node<TObject, TBounds> parentSmallestNode
             ) == false)
             {
                 return;
             }
             
-            if (smallestNode.Bounds.Intersects(obj.Bounds) == false)
+            if (Intersects(smallestNode.Bounds, obj.Bounds) == false)
             {
                 TryRemove(obj, smallestNode);
                 TryAdd(obj, _root, 0);
@@ -137,20 +158,10 @@ namespace SpatialPartitionSystem.Core
         }
 
         /// <summary>
-        /// Whether the bounds are completely inside the tree or not.
-        /// </summary>
-        /// <param name="bounds"></param>
-        /// <returns></returns>
-        public bool Contains(Bounds bounds)
-        {
-            return _root.Bounds.Contains(bounds.min) && _root.Bounds.Contains(bounds.max);
-        }
-        
-        /// <summary>
         /// Get all read only nodes of the tree.
         /// </summary>
         /// <returns></returns>
-        public IReadOnlyList<IReadOnlyNode<TObject>> GetAllNodes()
+        public IReadOnlyList<IReadOnlyNode<TObject, TBounds>> GetAllNodes()
         {
             return GetSubtreeFor(_root);
         }
@@ -160,7 +171,7 @@ namespace SpatialPartitionSystem.Core
         /// </summary>
         /// <param name="depth"></param>
         /// <returns></returns>
-        public IReadOnlyList<IReadOnlyNode<TObject>> GetNodesFor(int depth)
+        public IReadOnlyList<IReadOnlyNode<TObject, TBounds>> GetNodesFor(int depth)
         {
             depth = Mathf.Clamp(depth, 0, _maxDepth);
             return GetChildrensForDepth(_root, 0, depth);
@@ -172,14 +183,14 @@ namespace SpatialPartitionSystem.Core
         /// <param name="bounds">The bounds to check.</param>
         /// <param name="maxQueryObjects">The maximum number of query objects for more efficient memory allocation for the collection.</param>
         /// <returns></returns>
-        public IEnumerable<TObject> Query(Bounds bounds, int maxQueryObjects = 1000)
+        public IEnumerable<TObject> Query(TBounds bounds, int maxQueryObjects = 1000)
         {
             return Query(_root, bounds, maxQueryObjects);
         }
 
-        private bool TryAdd(TObject obj, Node<TObject> node, int depth)
+        private bool TryAdd(TObject obj, Node<TObject, TBounds> node, int depth)
         {
-            if (node.Bounds.Intersects(obj.Bounds) == false)
+            if (Intersects(node.Bounds, obj.Bounds) == false)
             {
                 return false;
             }
@@ -193,7 +204,7 @@ namespace SpatialPartitionSystem.Core
                 }
                 else
                 {
-                    Node<TObject>[] childrens = Split(node);
+                    Node<TObject, TBounds>[] childrens = Split(node);
 
                     bool isValuesTransfered = false;
                     for (int i = 0; i < node.Objects.Count; i++)
@@ -232,7 +243,7 @@ namespace SpatialPartitionSystem.Core
             return true;
         }
         
-        private bool TryRemove(TObject obj, Node<TObject> node)
+        private bool TryRemove(TObject obj, Node<TObject, TBounds> node)
         {
             if (node.IsLeaf)
             {
@@ -257,26 +268,26 @@ namespace SpatialPartitionSystem.Core
             return false;
         }
         
-        private Node<TObject>[] Split(Node<TObject> node)
+        private Node<TObject, TBounds>[] Split(Node<TObject, TBounds> node)
         {
-            node.Childrens = new Node<TObject>[QuadrantOrientationMap.Count];
+            node.Childrens = new Node<TObject, TBounds>[QuadrantOrientationMap.Count];
 
             var parentBoundary = node.Bounds;
-            var childSize = 0.5f * parentBoundary.size;
+            var childSize = 0.5f * GetBoundsSize(parentBoundary);
 
-            Vector3 childMin = parentBoundary.center - 0.5f * childSize;
-            Vector3 childMax = parentBoundary.center + 0.5f * childSize;
+            Vector3 childMin = GetBoundsCenter(parentBoundary) - 0.5f * childSize;
+            Vector3 childMax = GetBoundsCenter(parentBoundary) + 0.5f * childSize;
             
             for (int i = 0; i < QuadrantOrientationMap.Count; i++)
             {
-                var childBoundary = new Bounds(QuadrantOrientationMap[i](childMin, childMax), childSize);
-                node.Childrens[i] = new Node<TObject>(childBoundary, _maxObjects);
+                var childBoundary = CreateBounds(QuadrantOrientationMap[i](childMin, childMax), childSize);
+                node.Childrens[i] = new Node<TObject, TBounds>(childBoundary, _maxObjects);
             }
 
             return node.Childrens;
         }
         
-        private bool TryMerge(Node<TObject> node)
+        private bool TryMerge(Node<TObject, TBounds> node)
         {
             Assert.IsNotNull(node.Childrens, "Childrens of the node were null when merged!");
             
@@ -306,9 +317,9 @@ namespace SpatialPartitionSystem.Core
             return true;
         }
         
-        private IEnumerable<TObject> Query(Node<TObject> node, Bounds queryBounds, int maxQueryObjects)
+        private IEnumerable<TObject> Query(Node<TObject, TBounds> node, TBounds queryBounds, int maxQueryObjects)
         {
-            if (node.Bounds.Intersects(queryBounds) == false)
+            if (Intersects(node.Bounds, queryBounds) == false)
             {
                 return null;
             }
@@ -319,7 +330,7 @@ namespace SpatialPartitionSystem.Core
             {
                 for (int i = 0; i < node.Objects.Count; i++)
                 {
-                    if (queryBounds.Intersects(node.Objects[i].Bounds))
+                    if (Intersects(node.Objects[i].Bounds, queryBounds))
                     {
                         queryObjects.Add(node.Objects[i]);
                     }
@@ -343,7 +354,13 @@ namespace SpatialPartitionSystem.Core
             return queryObjects;
         }
         
-        private bool TryGetSmallestNodeRelativeFor(TObject obj, Node<TObject> relativeNode, Node<TObject> parentRelativeNode, out Node<TObject> smallestNode, out Node<TObject> parentSmallestNode)
+        private bool TryGetSmallestNodeRelativeFor(
+            TObject obj,
+            Node<TObject, TBounds> relativeNode,
+            Node<TObject, TBounds> parentRelativeNode,
+            out Node<TObject, TBounds> smallestNode,
+            out Node<TObject, TBounds> parentSmallestNode
+        )
         {
             if (relativeNode.IsLeaf)
             {
@@ -360,8 +377,8 @@ namespace SpatialPartitionSystem.Core
                     obj,
                     relativeNode.Childrens[i], 
                     relativeNode,
-                    out Node<TObject> innerSmallestNode,
-                    out Node<TObject> innerParentSmallestNode
+                    out Node<TObject, TBounds> innerSmallestNode,
+                    out Node<TObject, TBounds> innerParentSmallestNode
                 ))
                 {
                     smallestNode = innerSmallestNode;
@@ -375,7 +392,7 @@ namespace SpatialPartitionSystem.Core
             return false;
         }
         
-        private List<Node<TObject>> GetChildrensForDepth(Node<TObject> node, int actualDepth, int requiredDepth)
+        private List<Node<TObject, TBounds>> GetChildrensForDepth(Node<TObject, TBounds> node, int actualDepth, int requiredDepth)
         {
             if (node.IsLeaf == false)
             {
@@ -399,10 +416,10 @@ namespace SpatialPartitionSystem.Core
             return null;
         }
 
-        private List<Node<TObject>> GetSubtreeFor(Node<TObject> node)
+        private List<Node<TObject, TBounds>> GetSubtreeFor(Node<TObject, TBounds> node)
         {
             Assert.IsNotNull(node);
-            var subtree = new HashSet<Node<TObject>> { node };
+            var subtree = new HashSet<Node<TObject, TBounds>> { node };
 
             if (node.IsLeaf == false)
             {

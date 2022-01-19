@@ -3,17 +3,31 @@ using SpatialPartitionSystem.Core;
 
 namespace SpatialPartitionSystem.Behaviours
 {
-    public sealed class SpatialGameObject : MonoBehaviour, ISpatialObject
+    public abstract class SpatialGameObject<TBounds> : SpatialGameObject, ISpatialObject<TBounds>
+        where TBounds : struct
     {
-        public Bounds Bounds => new Bounds(transform.position + bounds.center, bounds.size);
+        public abstract TBounds RawBounds { get; }
+        public abstract TBounds Bounds { get; }
 
-        [SerializeField] private Bounds bounds = new Bounds(Vector3.zero, Vector3.one);
         [SerializeField] private Color boundsColor = Color.green;
 
-        private void OnDrawGizmosSelected()
+        protected abstract Vector3 GlobalBoundsCenter { get; }
+
+        private void OnDrawGizmos()
         {
             Gizmos.color = boundsColor;
-            Gizmos.DrawWireCube(transform.position + bounds.center, bounds.size);
+            Gizmos.DrawWireCube(GlobalBoundsCenter, BoundsSize);
         }
+    }
+
+    public abstract class SpatialGameObject : MonoBehaviour
+    {
+        public abstract Vector3 BoundsCenter { get; }
+
+        public abstract Vector3 BoundsSize { get; }
+
+        public abstract Vector3 BoundsMin { get; }
+
+        public abstract Vector3 BoundsMax { get; }
     }
 }

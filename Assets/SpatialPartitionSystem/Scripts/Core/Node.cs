@@ -1,29 +1,29 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
 
 namespace SpatialPartitionSystem.Core
 {
-    public sealed class Node<TObject> : IReadOnlyNode<TObject>
-        where TObject : class, ISpatialObject
+    internal sealed class Node<TObject, TBounds> : IReadOnlyNode<TObject, TBounds>
+        where TObject : class, ISpatialObject<TBounds>
+        where TBounds : struct
     {
-        public Node<TObject>[] Childrens;
+        public Node<TObject, TBounds>[] Childrens;
         public readonly List<TObject> Objects;
-        public Bounds Bounds;
+        public TBounds Bounds;
 
         public bool IsLeaf => Childrens == null || Childrens.Length == 0;
 
-        public Node(Bounds bounds, int maxObjects)
+        public Node(TBounds bounds, int maxObjects)
         {
             Childrens = null;
             Objects = new List<TObject>(capacity: maxObjects);
             Bounds = bounds;
         }
         
-        IReadOnlyList<IReadOnlyNode<TObject>> IReadOnlyNode<TObject>.Childrens => Childrens?.ToList();
+        IReadOnlyList<IReadOnlyNode<TObject, TBounds>> IReadOnlyNode<TObject, TBounds>.Childrens => Childrens?.ToList();
 
-        IReadOnlyList<TObject> IReadOnlyNode<TObject>.Objects => Objects;
+        IReadOnlyList<TObject> IReadOnlyNode<TObject, TBounds>.Objects => Objects;
 
-        Bounds IReadOnlyNode<TObject>.Bounds => Bounds;
+        TBounds IReadOnlyNode<TObject, TBounds>.Bounds => Bounds;
     }
 }

@@ -4,8 +4,8 @@ using UnityEngine;
 
 namespace SpatialPartitionSystem.Core
 {
-    public sealed class Octree<TObject> : SpatialTree<TObject>
-        where TObject : class, ISpatialObject
+    public sealed class Octree<TObject> : SpatialTree<TObject, Bounds>
+        where TObject : class, ISpatialObject<Bounds>
     {
         protected override Dictionary<int, Func<Vector3, Vector3, Vector3>> QuadrantOrientationMap { get; }
             = new Dictionary<int, Func<Vector3, Vector3, Vector3>>
@@ -19,7 +19,23 @@ namespace SpatialPartitionSystem.Core
                 { 6, (min, max) => new Vector3(min.x, min.y, min.z) },
                 { 7, (min, max) => new Vector3(max.x, min.y, min.z) }
             };
-        
+
+        /// <summary>
+        /// Constructs a new octree with given settings.
+        /// </summary>
+        /// <param name="bounds">The bounds of the tree.</param>
+        /// <param name="maxObjects">The maximum number of objects per node.</param>
+        /// <param name="maxDepth">The maximum depth of the tree.</param>
         public Octree(Bounds bounds, int maxObjects, int maxDepth) : base(bounds, maxObjects, maxDepth) { }
+
+        public override bool Contains(Bounds bounds) => _root.Bounds.Contains(bounds.min) && _root.Bounds.Contains(bounds.max);
+
+        protected override bool Intersects(Bounds a, Bounds b) => a.Intersects(b);
+
+        protected override Vector3 GetBoundsCenter(Bounds bounds) => bounds.center;
+
+        protected override Vector3 GetBoundsSize(Bounds bounds) => bounds.size;
+
+        protected override Bounds CreateBounds(Vector3 center, Vector3 size) => new Bounds(center, size);
     }
 }

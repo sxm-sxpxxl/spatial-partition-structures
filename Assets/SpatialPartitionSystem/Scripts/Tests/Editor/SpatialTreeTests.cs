@@ -6,11 +6,11 @@ using SpatialPartitionSystem.Core;
 namespace SpatialPartitionSystem.Tests {
     public class SpatialTreeTests
     {
-        private class TestSpatialObject : ISpatialObject
+        private class TestSpatialObject : ISpatialObject<Rect>
         {
-            public Bounds Bounds { get; set; }
+            public Rect Bounds { get; set; }
 
-            public TestSpatialObject(Bounds bounds)
+            public TestSpatialObject(Rect bounds)
             {
                 Bounds = bounds;
             }
@@ -19,17 +19,18 @@ namespace SpatialPartitionSystem.Tests {
         [Test]
         public void AddObjects()
         {
-            var treeBounds = new Bounds(Vector3.zero, Vector2.one);
-            SpatialTree<TestSpatialObject> tree = new Quadtree<TestSpatialObject>(treeBounds, 1, 3);
+            var treeBounds = new Rect(Vector2.zero, Vector2.one) { center = Vector2.zero };
+            var tree = new Quadtree<TestSpatialObject>(treeBounds, 1, 3);
 
-            var topRightOffset = 0.75f * treeBounds.extents;
-            var bottomLeftOffset = 0.25f * treeBounds.extents;
+            var treeBoundsExtents = 0.5f * treeBounds.size;
+            var topRightOffset = 0.75f * treeBoundsExtents;
+            var bottomLeftOffset = 0.25f * treeBoundsExtents;
             var objBoundsSize = 0.1f * treeBounds.size;
             
-            var testObj1 = new TestSpatialObject(new Bounds(treeBounds.center + topRightOffset, objBoundsSize));
-            var testObj2 = new TestSpatialObject(new Bounds(treeBounds.center - topRightOffset, objBoundsSize));
-            var testObj3 = new TestSpatialObject(new Bounds(treeBounds.center + bottomLeftOffset, objBoundsSize));
-            var testObj4 = new TestSpatialObject(new Bounds(treeBounds.center + new Vector3(topRightOffset.x, -topRightOffset.y), objBoundsSize));
+            var testObj1 = new TestSpatialObject(new Rect(treeBounds.center + topRightOffset, objBoundsSize));
+            var testObj2 = new TestSpatialObject(new Rect(treeBounds.center - topRightOffset, objBoundsSize));
+            var testObj3 = new TestSpatialObject(new Rect(treeBounds.center + bottomLeftOffset, objBoundsSize));
+            var testObj4 = new TestSpatialObject(new Rect(treeBounds.center + new Vector2(topRightOffset.x, -topRightOffset.y), objBoundsSize));
 
             var testObjects = new [] { testObj1, testObj2 };
 
@@ -53,13 +54,13 @@ namespace SpatialPartitionSystem.Tests {
                 Assert.AreEqual(childNodes[0].Bounds.center, treeBounds.center + boundsOffset);
                 Assert.AreEqual(childNodes[0].Bounds.size, expectedBoundsSize);
             
-                Assert.AreEqual(childNodes[1].Bounds.center, treeBounds.center + new Vector3(-boundsOffset.x, boundsOffset.y));
+                Assert.AreEqual(childNodes[1].Bounds.center, treeBounds.center + new Vector2(-boundsOffset.x, boundsOffset.y));
                 Assert.AreEqual(childNodes[1].Bounds.size, expectedBoundsSize);
             
                 Assert.AreEqual(childNodes[2].Bounds.center, treeBounds.center - boundsOffset);
                 Assert.AreEqual(childNodes[2].Bounds.size, expectedBoundsSize);
             
-                Assert.AreEqual(childNodes[3].Bounds.center, treeBounds.center + new Vector3(boundsOffset.x, -boundsOffset.y));
+                Assert.AreEqual(childNodes[3].Bounds.center, treeBounds.center + new Vector2(boundsOffset.x, -boundsOffset.y));
                 Assert.AreEqual(childNodes[3].Bounds.size, expectedBoundsSize);   
             }
 
@@ -89,14 +90,15 @@ namespace SpatialPartitionSystem.Tests {
         [Test]
         public void ClearObjects()
         {
-            var treeBounds = new Bounds(Vector3.zero, Vector2.one);
-            SpatialTree<TestSpatialObject> tree = new Quadtree<TestSpatialObject>(treeBounds, 1, 2);
+            var treeBounds = new Rect(Vector2.zero, Vector2.one) { center = Vector2.zero };
+            var tree = new Quadtree<TestSpatialObject>(treeBounds, 1, 2);
 
-            var topRightOffset = 0.75f * treeBounds.extents;
+            var treeBoundsExtents = 0.5f * treeBounds.size;
+            var topRightOffset = 0.75f * treeBoundsExtents;
             var objBoundsSize = 0.1f * treeBounds.size;
             
-            var testObj1 = new TestSpatialObject(new Bounds(treeBounds.center + topRightOffset, objBoundsSize));
-            var testObj2 = new TestSpatialObject(new Bounds(treeBounds.center - topRightOffset, objBoundsSize));
+            var testObj1 = new TestSpatialObject(new Rect(treeBounds.center + topRightOffset, objBoundsSize));
+            var testObj2 = new TestSpatialObject(new Rect(treeBounds.center - topRightOffset, objBoundsSize));
             
             tree.TryAdd(testObj1);
             tree.TryAdd(testObj2);
@@ -115,14 +117,15 @@ namespace SpatialPartitionSystem.Tests {
         [Test]
         public void MaxDepthOfTree()
         {
-            var treeBounds = new Bounds(Vector3.zero, Vector2.one);
-            SpatialTree<TestSpatialObject> tree = new Quadtree<TestSpatialObject>(treeBounds, 1, 0);
+            var treeBounds = new Rect(Vector2.zero, Vector2.one) { center = Vector2.zero };
+            var tree = new Quadtree<TestSpatialObject>(treeBounds, 1, 0);
 
-            var topRightOffset = 0.75f * treeBounds.extents;
+            var treeBoundsExtents = 0.5f * treeBounds.size;
+            var topRightOffset = 0.75f * treeBoundsExtents;
             var objBoundsSize = 0.1f * treeBounds.size;
             
-            var testObj1 = new TestSpatialObject(new Bounds(treeBounds.center + topRightOffset, objBoundsSize));
-            var testObj2 = new TestSpatialObject(new Bounds(treeBounds.center - topRightOffset, objBoundsSize));
+            var testObj1 = new TestSpatialObject(new Rect(treeBounds.center + topRightOffset, objBoundsSize));
+            var testObj2 = new TestSpatialObject(new Rect(treeBounds.center - topRightOffset, objBoundsSize));
             
             tree.TryAdd(testObj1);
             tree.TryAdd(testObj2);
@@ -137,14 +140,15 @@ namespace SpatialPartitionSystem.Tests {
         [Test]
         public void MaxObjectsPerNode()
         {
-            var treeBounds = new Bounds(Vector3.zero, Vector2.one);
-            SpatialTree<TestSpatialObject> tree = new Quadtree<TestSpatialObject>(treeBounds, 2, 2);
+            var treeBounds = new Rect(Vector2.zero, Vector2.one) { center = Vector2.zero };
+            var tree = new Quadtree<TestSpatialObject>(treeBounds, 2, 2);
 
-            var topRightOffset = 0.75f * treeBounds.extents;
+            var treeBoundsExtents = 0.5f * treeBounds.size;
+            var topRightOffset = 0.75f * treeBoundsExtents;
             var objBoundsSize = 0.1f * treeBounds.size;
             
-            var testObj1 = new TestSpatialObject(new Bounds(treeBounds.center + topRightOffset, objBoundsSize));
-            var testObj2 = new TestSpatialObject(new Bounds(treeBounds.center - topRightOffset, objBoundsSize));
+            var testObj1 = new TestSpatialObject(new Rect(treeBounds.center + topRightOffset, objBoundsSize));
+            var testObj2 = new TestSpatialObject(new Rect(treeBounds.center - topRightOffset, objBoundsSize));
 
             tree.TryAdd(testObj1);
             tree.TryAdd(testObj2);
@@ -159,14 +163,15 @@ namespace SpatialPartitionSystem.Tests {
         [Test]
         public void RemoveObject()
         {
-            var treeBounds = new Bounds(Vector3.zero, Vector2.one);
-            SpatialTree<TestSpatialObject> tree = new Quadtree<TestSpatialObject>(treeBounds, 1, 2);
+            var treeBounds = new Rect(Vector2.zero, Vector2.one) { center = Vector2.zero };
+            var tree = new Quadtree<TestSpatialObject>(treeBounds, 1, 2);
 
-            var topRightOffset = 0.75f * treeBounds.extents;
+            var treeBoundsExtents = 0.5f * treeBounds.size;
+            var topRightOffset = 0.75f * treeBoundsExtents;
             var objBoundsSize = 0.1f * treeBounds.size;
             
-            var testObj1 = new TestSpatialObject(new Bounds(treeBounds.center + topRightOffset, objBoundsSize));
-            var testObj2 = new TestSpatialObject(new Bounds(treeBounds.center - topRightOffset, objBoundsSize));
+            var testObj1 = new TestSpatialObject(new Rect(treeBounds.center + topRightOffset, objBoundsSize));
+            var testObj2 = new TestSpatialObject(new Rect(treeBounds.center - topRightOffset, objBoundsSize));
 
             tree.TryAdd(testObj1);
             tree.TryAdd(testObj2);
@@ -187,14 +192,15 @@ namespace SpatialPartitionSystem.Tests {
         [Test]
         public void UpdateObject()
         {
-            var treeBounds = new Bounds(Vector3.zero, Vector2.one);
-            SpatialTree<TestSpatialObject> tree = new Quadtree<TestSpatialObject>(treeBounds, 1, 2);
+            var treeBounds = new Rect(Vector2.zero, Vector2.one) { center = Vector2.zero };
+            var tree = new Quadtree<TestSpatialObject>(treeBounds, 1, 2);
 
-            var topRightOffset = 0.75f * treeBounds.extents;
+            var treeBoundsExtents = 0.5f * treeBounds.size;
+            var topRightOffset = 0.75f * treeBoundsExtents;
             var objBoundsSize = 0.1f * treeBounds.size;
             
-            var testObj1 = new TestSpatialObject(new Bounds(treeBounds.center + topRightOffset, objBoundsSize));
-            var testObj2 = new TestSpatialObject(new Bounds(treeBounds.center - topRightOffset, objBoundsSize));
+            var testObj1 = new TestSpatialObject(new Rect(treeBounds.center + topRightOffset, objBoundsSize));
+            var testObj2 = new TestSpatialObject(new Rect(treeBounds.center - topRightOffset, objBoundsSize));
             
             tree.TryAdd(testObj1);
             tree.TryAdd(testObj2);
@@ -202,7 +208,7 @@ namespace SpatialPartitionSystem.Tests {
             var childNodes = tree.GetNodesFor(1);
             Assert.IsTrue(childNodes[0].Objects.Contains(testObj1));
             
-            testObj1.Bounds = new Bounds(treeBounds.center + new Vector3(-topRightOffset.x, topRightOffset.y), objBoundsSize);
+            testObj1.Bounds = new Rect(treeBounds.center + new Vector2(-topRightOffset.x, topRightOffset.y), objBoundsSize);
             tree.Update(testObj1);
 
             // Check that the object is located in the tree in accordance with new position of its bounds
@@ -213,23 +219,24 @@ namespace SpatialPartitionSystem.Tests {
         [Test]
         public void QueryObjects()
         {
-            var treeBounds = new Bounds(Vector3.zero, Vector2.one);
-            SpatialTree<TestSpatialObject> tree = new Quadtree<TestSpatialObject>(treeBounds, 1, 2);
+            var treeBounds = new Rect(Vector2.zero, Vector2.one) { center = Vector2.zero };
+            var tree = new Quadtree<TestSpatialObject>(treeBounds, 1, 2);
 
-            var queryBounds = new Bounds(Vector3.zero, 0.5f * Vector2.one);
+            var queryBounds = new Rect(Vector2.zero, 0.5f * Vector2.one) { center = Vector2.zero };
             
-            var bottomLeftOffset = 0.25f * treeBounds.extents;
+            var treeBoundsExtents = 0.5f * treeBounds.size;
+            var bottomLeftOffset = 0.25f * treeBoundsExtents;
             var objBoundsSize = 0.1f * treeBounds.size;
             
-            var testObj1 = new TestSpatialObject(new Bounds(treeBounds.center + bottomLeftOffset, objBoundsSize));
-            var testObj2 = new TestSpatialObject(new Bounds(treeBounds.center - bottomLeftOffset, objBoundsSize));
+            var testObj1 = new TestSpatialObject(new Rect(treeBounds.center + bottomLeftOffset, objBoundsSize));
+            var testObj2 = new TestSpatialObject(new Rect(treeBounds.center - bottomLeftOffset, objBoundsSize));
 
             tree.TryAdd(testObj1);
             tree.TryAdd(testObj2);
-            
+
             Assert.AreEqual(2, tree.Query(queryBounds, 2).ToArray().Length);
 
-            queryBounds.center += (Vector3) (0.3f * Vector2.one);
+            queryBounds.center += 0.3f * Vector2.one;
             var queryObjects = tree.Query(queryBounds, 2).ToArray();
             
             Assert.AreEqual(1, queryObjects.Length);
