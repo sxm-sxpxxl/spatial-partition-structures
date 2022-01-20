@@ -203,8 +203,7 @@ namespace SpatialPartitionSystem.Core
         /// <returns></returns>
         public IEnumerable<TObject> Query(TBounds bounds, int maxQueryObjects = 1000)
         {
-            var queryObjects = Query(_root, bounds, maxQueryObjects);
-            return queryObjects == null ? new TObject[0] : queryObjects;
+            return Query(_root, bounds, maxQueryObjects) ?? new TObject[0];
         }
 
         private bool TryAdd(TObject obj, Node<TObject, TBounds> node, int depth)
