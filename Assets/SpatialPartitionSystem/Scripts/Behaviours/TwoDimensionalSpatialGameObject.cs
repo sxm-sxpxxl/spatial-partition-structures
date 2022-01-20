@@ -31,9 +31,13 @@ namespace SpatialPartitionSystem.Behaviours
         }
 
         public override Rect Bounds => new Rect(Vector3.zero, BoundsSize) { center = (Vector3) bounds.center };
-        
+
         public override Rect LocalBounds => new Rect(Vector2.zero, BoundsSize) { center = LocalBoundsCenter };
 
+        public override Vector3 WorldBoundsCenter => transform.TransformPoint(bounds.center);
+
+        public override Vector3 WorldBoundsSize => transform.TransformDirection(bounds.size);
+        
         public override Vector3 LocalBoundsCenter => transform.localPosition + (Vector3) bounds.center;
 
         public override Vector3 BoundsSize => bounds.size;
@@ -41,9 +45,5 @@ namespace SpatialPartitionSystem.Behaviours
         public override Vector3 BoundsMin =>  bounds.min;
 
         public override Vector3 BoundsMax => bounds.max;
-        
-        protected override Vector3 WorldBoundsCenter => transform.TransformPoint(bounds.center);
-
-        protected override Vector3 WorldBoundsSize => transform.TransformDirection(bounds.size);
     }
 }

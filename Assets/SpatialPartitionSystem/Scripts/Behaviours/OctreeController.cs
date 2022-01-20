@@ -10,6 +10,10 @@ namespace SpatialPartitionSystem.Behaviours
         [SerializeField, Range(1, 8)] private int maxObjects = 4;
         [SerializeField, Range(1, 16)] private int maxDepth = 8;
         
+        [Space]
+        [SerializeField] private ThreeDimensionalSpatialGameObject querySpatialObject;
+        [SerializeField] private Color queryObjectBoundsColor = Color.white;
+        
         private Octree<ThreeDimensionalSpatialGameObject> _octree;
 
         private void OnDrawGizmos()
@@ -20,6 +24,18 @@ namespace SpatialPartitionSystem.Behaviours
             }
             
             _octree.DebugDraw(relativeTransform: transform);
+            
+            if (querySpatialObject == null)
+            {
+                return;
+            }
+
+            var queryObjects = _octree.Query(querySpatialObject.LocalBounds, 100);
+            foreach (var obj in queryObjects)
+            {
+                Gizmos.color = queryObjectBoundsColor;
+                Gizmos.DrawCube(obj.WorldBoundsCenter, obj.WorldBoundsSize);
+            }
         }
 
         private void Awake()

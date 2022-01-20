@@ -12,10 +12,6 @@ namespace SpatialPartitionSystem.Behaviours
         
         public abstract TBounds LocalBounds { get; }
 
-        protected abstract Vector3 WorldBoundsCenter { get; }
-        
-        protected abstract Vector3 WorldBoundsSize { get; }
-
         private void OnDrawGizmos()
         {
             Gizmos.color = boundsColor;
@@ -25,6 +21,10 @@ namespace SpatialPartitionSystem.Behaviours
 
     public abstract class SpatialGameObject : MonoBehaviour
     {
+        public abstract Vector3 WorldBoundsCenter { get; }
+        
+        public abstract Vector3 WorldBoundsSize { get; }
+
         public abstract Vector3 LocalBoundsCenter { get; }
 
         public abstract Vector3 BoundsSize { get; }
