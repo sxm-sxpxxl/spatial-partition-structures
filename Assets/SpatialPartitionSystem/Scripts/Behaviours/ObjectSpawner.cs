@@ -8,14 +8,18 @@ using SpatialPartitionSystem.Core;
 
 namespace SpatialPartitionSystem.Behaviours
 {
-    [RequireComponent(typeof(SpatialGameObject))]
+    [DisallowMultipleComponent, RequireComponent(typeof(SpatialGameObject))]
     public sealed class ObjectSpawner : MonoBehaviour
     {
+        [Tooltip("The number of objects created.")]
         [SerializeField, Range(1, 100)] private int objectsCount = 10;
+        [Tooltip("The delay between object creation.")]
         [SerializeField, Range(0f, 5f)] private float creationDelay = 2f;
         
         [Space]
+        [Tooltip("The prefab with created object.")]
         [SerializeField] private SpatialGameObject objectPrefab;
+        [Tooltip("The parent container for the created objects.")]
         [SerializeField] private Transform objectsContainer;
         
         [Space]
@@ -57,24 +61,6 @@ namespace SpatialPartitionSystem.Behaviours
                 
                 instance.gameObject.SetActive(true);
             }
-        }
-        
-        private IEnumerator RemoveObjectsCoroutine()
-        {
-            for (int i = 0; i < _objects.Count; i++)
-            {
-                var removedObject = _objects[i];
-                Debug.Log($"Removing \'{removedObject.name}\' object...");
-                yield return new WaitForSeconds(creationDelay);
-                
-                // _quadTree.TryRemove(removedObject);
-                
-                removedObject.gameObject.SetActive(false);
-                Debug.Log($"Object \'{removedObject.name}\' was removed!");
-                Debug.Log($"************************************");
-            }
-            
-            _objects.Clear();
         }
     }
 }

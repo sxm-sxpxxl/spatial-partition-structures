@@ -3,9 +3,11 @@ using SpatialPartitionSystem.Core;
 
 namespace SpatialPartitionSystem.Behaviours
 {
+    [DisallowMultipleComponent]
     public abstract class SpatialGameObject<TBounds> : SpatialGameObject, ISpatialObject<TBounds>
         where TBounds : struct
     {
+        [Tooltip("The bounds color for debug visualization.")]
         [SerializeField] private Color boundsColor = Color.green;
         
         public abstract TBounds Bounds { get; }

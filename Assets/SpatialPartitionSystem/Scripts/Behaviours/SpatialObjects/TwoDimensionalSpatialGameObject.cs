@@ -7,7 +7,9 @@ namespace SpatialPartitionSystem.Behaviours
 {
     public sealed class TwoDimensionalSpatialGameObject : SpatialGameObject<Rect>
     {
+        [Tooltip("The rect bounds of that spatial object.")]
         [SerializeField] private Rect bounds = new Rect(Vector2.zero, Vector2.one) { center = Vector2.zero };
+        [Tooltip("The plane orientation for debug visualization.")]
         [SerializeField] private PlaneOrientation planeOrientation = PlaneOrientation.XY;
 
         private readonly Dictionary<PlaneOrientation, Quaternion> planeOrientationToRotationMap =

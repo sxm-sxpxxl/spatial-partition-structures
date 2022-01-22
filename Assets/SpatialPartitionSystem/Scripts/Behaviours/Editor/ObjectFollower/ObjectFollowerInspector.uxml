@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:engine="UnityEngine.UIElements"
+    xmlns:editor="UnityEditor.UIElements"
+    xsi:noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd"
+>
+    <editor:PropertyField name="script" binding-path="m_Script"/>
+    <engine:VisualElement name="container">
+        <engine:Style src="ObjectFollowerInspector.uss"/>
+        <engine:VisualElement name="following-state-icon"/>
+        <editor:PropertyField name="selected-object" binding-path="selectedObject"/>
+        <engine:Button name="follow-to-button" text="Follow To"/>
+        <engine:Button name="stop-following-button" text="Stop Following"/>
+    </engine:VisualElement>
+</engine:UXML>

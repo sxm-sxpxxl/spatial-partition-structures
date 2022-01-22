@@ -5,6 +5,7 @@ namespace SpatialPartitionSystem.Behaviours
 {
     public sealed class ThreeDimensionalSpatialGameObject : SpatialGameObject<Bounds>
     {
+        [Tooltip("The rect bounds of that spatial object.")]
         [SerializeField] private Bounds bounds = new Bounds(Vector3.zero, Vector3.one);
         
         public override Bounds Bounds => new Bounds(bounds.center, BoundsSize);

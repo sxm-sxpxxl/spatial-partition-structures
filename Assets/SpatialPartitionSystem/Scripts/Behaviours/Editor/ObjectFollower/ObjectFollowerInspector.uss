@@ -1,0 +1,46 @@
+#container {
+    flex-direction: row;
+}
+
+#following-state-icon {
+    width: 16px;
+    height: 16px;
+    background-image: url("circle-icon.png");
+    align-self: center;
+}
+
+#following-state-icon.following-enabled {
+    -unity-background-image-tint-color: rgb(0, 255, 0);
+}
+
+#following-state-icon.following-disabled {
+    -unity-background-image-tint-color: rgb(255, 0, 0);
+}
+
+#selected-object {
+    flex-grow: 1;
+}
+
+#follow-to-button {
+    background-color: rgb(127, 255, 127);
+}
+
+#follow-to-button:hover {
+    background-color: rgb(63, 255, 63);
+}
+
+#follow-to-button:active {
+    background-color: rgb(0, 255, 0);
+}
+
+#stop-following-button {
+    background-color: rgb(255, 127, 127);
+}
+
+#stop-following-button:hover {
+    background-color: rgb(255, 63, 63);
+}
+
+#stop-following-button:active {
+    background-color: rgb(255, 0, 0);
+}

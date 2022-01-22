@@ -4,14 +4,18 @@ using SpatialPartitionSystem.Core;
 
 namespace SpatialPartitionSystem.Behaviours
 {
-    [RequireComponent(typeof(ThreeDimensionalSpatialGameObject))]
+    [DisallowMultipleComponent, RequireComponent(typeof(ThreeDimensionalSpatialGameObject))]
     public sealed class OctreeController : MonoBehaviour
     {
+        [Tooltip("The maximum number of objects per node.")]
         [SerializeField, Range(1, 8)] private int maxObjects = 4;
+        [Tooltip("The maximum depth of the tree. Non-fitting objects are placed in already created nodes.")]
         [SerializeField, Range(1, 16)] private int maxDepth = 8;
         
         [Space]
+        [Tooltip("The spatial object with its bounds to request an intersection with tree objects.")]
         [SerializeField] private ThreeDimensionalSpatialGameObject querySpatialObject;
+        [Tooltip("The bounds color of the queried objects for debug visualization.")]
         [SerializeField] private Color queryObjectBoundsColor = Color.white;
         
         private Octree<ThreeDimensionalSpatialGameObject> _octree;

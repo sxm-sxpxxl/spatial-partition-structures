@@ -1,34 +1,37 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
+[DisallowMultipleComponent, ExecuteInEditMode]
 public sealed class ObjectFollower : MonoBehaviour
 {
+    public bool IsFollowing { get; private set; }
+
     [SerializeField] private Transform selectedObject;
 
-    private bool _isFollowing = false;
-    
-    [ContextMenu("Follow to selected object")]
-    public void FollowToSelectedObject()
+    public void StartFollowing()
     {
         if (selectedObject == null)
         {
+            Debug.LogWarning("Object wasn't selected!");
             return;
         }
 
-        _isFollowing = true;
+        IsFollowing = true;
+        SceneView.RepaintAll();
     }
 
-    [ContextMenu("Unfollow selected object")]
-    public void UnFollow()
+    public void StopFollowing()
     {
-        _isFollowing = false;
+        IsFollowing = false;
     }
 
     private void Update()
     {
-        if (selectedObject == null || _isFollowing == false)
+        if (selectedObject == null || IsFollowing == false)
         {
             return;
         }

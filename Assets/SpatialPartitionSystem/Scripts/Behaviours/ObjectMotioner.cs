@@ -7,10 +7,12 @@ using SpatialPartitionSystem.Core;
 
 namespace SpatialPartitionSystem.Behaviours
 {
-    [RequireComponent(typeof(SpatialGameObject))]
+    [DisallowMultipleComponent, RequireComponent(typeof(SpatialGameObject))]
     public sealed class ObjectMotioner : MonoBehaviour
     {
+        [Tooltip("Do you need to update the motion of the objects?")]
         [SerializeField] private bool isMotionUpdated = false;
+        [Tooltip("The speed of the object motion (unit per second).")]
         [SerializeField, Range(0.1f, 10f)] private float speed = 1f;
 
         [Space]
