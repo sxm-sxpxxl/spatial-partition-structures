@@ -5,7 +5,7 @@ using UnityEngine;
 using Random = UnityEngine.Random;
 using SpatialPartitionSystem.Core;
 
-namespace SpatialPartitionSystem.Behaviours
+namespace SpatialPartitionSystem.Example
 {
     [DisallowMultipleComponent, RequireComponent(typeof(TwoDimensionalSpatialGameObject))]
     public sealed class QuadtreeController : MonoBehaviour

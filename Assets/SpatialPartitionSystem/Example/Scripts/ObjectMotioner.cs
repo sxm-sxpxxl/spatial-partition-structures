@@ -5,7 +5,7 @@ using UnityEngine.Events;
 using Random = UnityEngine.Random;
 using SpatialPartitionSystem.Core;
 
-namespace SpatialPartitionSystem.Behaviours
+namespace SpatialPartitionSystem.Example
 {
     [DisallowMultipleComponent, RequireComponent(typeof(SpatialGameObject))]
     public sealed class ObjectMotioner : MonoBehaviour

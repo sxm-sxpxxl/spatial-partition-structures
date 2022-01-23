@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
-using SpatialPartitionSystem.Core;
 
-namespace SpatialPartitionSystem.Behaviours
+namespace SpatialPartitionSystem.Core
 {
     public sealed class TwoDimensionalSpatialGameObject : SpatialGameObject<Rect>
     {

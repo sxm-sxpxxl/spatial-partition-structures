@@ -1,7 +1,6 @@
 ﻿using UnityEngine;
-using SpatialPartitionSystem.Core;
 
-namespace SpatialPartitionSystem.Behaviours
+namespace SpatialPartitionSystem.Core
 {
     [DisallowMultipleComponent]
     public abstract class SpatialGameObject<TBounds> : SpatialGameObject, ISpatialObject<TBounds>

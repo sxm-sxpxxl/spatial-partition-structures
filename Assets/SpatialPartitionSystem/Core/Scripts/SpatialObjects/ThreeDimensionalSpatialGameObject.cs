@@ -1,7 +1,6 @@
 using UnityEngine;
-using SpatialPartitionSystem.Core;
 
-namespace SpatialPartitionSystem.Behaviours
+namespace SpatialPartitionSystem.Core
 {
     public sealed class ThreeDimensionalSpatialGameObject : SpatialGameObject<Bounds>
     {

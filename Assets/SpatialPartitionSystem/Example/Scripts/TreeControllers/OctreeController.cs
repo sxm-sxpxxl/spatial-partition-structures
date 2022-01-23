@@ -2,7 +2,7 @@
 using UnityEngine;
 using SpatialPartitionSystem.Core;
 
-namespace SpatialPartitionSystem.Behaviours
+namespace SpatialPartitionSystem.Example
 {
     [DisallowMultipleComponent, RequireComponent(typeof(ThreeDimensionalSpatialGameObject))]
     public sealed class OctreeController : MonoBehaviour
