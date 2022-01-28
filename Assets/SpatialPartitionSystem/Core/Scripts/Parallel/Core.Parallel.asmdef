@@ -1,12 +1,13 @@
 {
-    "name": "Example",
+    "name": "Core.Parallel",
     "rootNamespace": "",
     "references": [
-        "GUID:0b1d3ff28dfceaa499d2cbe72326e362"
+        "GUID:d8b63aba1907145bea998dd612889d6b",
+        "GUID:e0cd26848372d4e5c891c569017e11f1"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
-    "allowUnsafeCode": false,
+    "allowUnsafeCode": true,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,

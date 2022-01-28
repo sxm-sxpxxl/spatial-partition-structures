@@ -1,13 +1,17 @@
 using UnityEngine;
 
-namespace SpatialPartitionSystem.Core
+namespace SpatialPartitionSystem.Core.OldSeries
 {
-    public sealed class ThreeDimensionalSpatialGameObject : SpatialGameObject<Bounds>
+    public class ThreeDimensionalSpatialGameObject : SpatialGameObject<Bounds>
     {
         [Tooltip("The rect bounds of that spatial object.")]
         [SerializeField] private Bounds bounds = new Bounds(Vector3.zero, Vector3.one);
-        
-        public override Bounds Bounds => new Bounds(bounds.center, BoundsSize);
+
+        public override Bounds Bounds
+        {
+            get => new Bounds(bounds.center, BoundsSize);
+            set => bounds = value;
+        }
 
         public override Bounds LocalBounds => new Bounds(LocalBoundsCenter, BoundsSize);
 
@@ -17,7 +21,17 @@ namespace SpatialPartitionSystem.Core
         
         public override Vector3 LocalBoundsCenter => transform.localPosition + bounds.center;
 
-        public override Vector3 BoundsSize => bounds.size;
+        public override Vector3 BoundsCenter
+        {
+            get => bounds.center;
+            set => bounds.center = value;
+        }
+        
+        public override Vector3 BoundsSize
+        {
+            get => bounds.size;
+            set => bounds.size = value;
+        }
 
         public override Vector3 BoundsMin => bounds.min;
 

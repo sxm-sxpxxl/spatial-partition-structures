@@ -1,6 +1,6 @@
 ﻿using System;
 using UnityEngine;
-using SpatialPartitionSystem.Core;
+using SpatialPartitionSystem.Core.OldSeries;
 
 namespace SpatialPartitionSystem.Example
 {

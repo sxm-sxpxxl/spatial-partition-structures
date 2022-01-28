@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace SpatialPartitionSystem.Core
+namespace SpatialPartitionSystem.Core.OldSeries
 {
     [DisallowMultipleComponent]
     public abstract class SpatialGameObject<TBounds> : SpatialGameObject, ISpatialObject<TBounds>
@@ -9,14 +9,14 @@ namespace SpatialPartitionSystem.Core
         [Tooltip("The bounds color for debug visualization.")]
         [SerializeField] private Color boundsColor = Color.green;
         
-        public abstract TBounds Bounds { get; }
+        public abstract TBounds Bounds { get; set; }
         
         public abstract TBounds LocalBounds { get; }
 
         private void OnDrawGizmos()
         {
             Gizmos.color = boundsColor;
-            Gizmos.DrawWireCube(WorldBoundsCenter, WorldBoundsSize);
+            Gizmos.DrawWireCube(WorldBoundsCenter, BoundsSize);
         }
     }
 
@@ -28,7 +28,9 @@ namespace SpatialPartitionSystem.Core
 
         public abstract Vector3 LocalBoundsCenter { get; }
 
-        public abstract Vector3 BoundsSize { get; }
+        public abstract Vector3 BoundsCenter { get; set; }
+        
+        public abstract Vector3 BoundsSize { get; set; }
 
         public abstract Vector3 BoundsMin { get; }
 

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace SpatialPartitionSystem.Core
+namespace SpatialPartitionSystem.Core.OldSeries
 {
     public sealed class Octree<TObject> : SpatialTree<TObject, Bounds>
         where TObject : class, ISpatialObject<Bounds>
@@ -30,7 +30,15 @@ namespace SpatialPartitionSystem.Core
 
         public override bool Contains(Bounds bounds) => _root.Bounds.Contains(bounds.min) && _root.Bounds.Contains(bounds.max);
 
-        protected override bool Intersects(Bounds a, Bounds b) => a.Intersects(b);
+        protected override bool Intersects(Bounds a, Bounds b)
+        {
+            Vector3 aMin = a.min;
+            Vector3 aMax = a.max;
+            Vector3 bMin = b.min;
+            Vector3 bMax = b.max;
+            
+            return aMin.x < bMax.x && aMax.x > bMin.x && aMin.y < bMax.y && aMax.y > bMin.y && aMin.z < bMax.z && aMax.z > bMin.z;
+        }
 
         protected override Vector3 GetBoundsCenter(Bounds bounds) => bounds.center;
 

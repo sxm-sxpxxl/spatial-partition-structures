@@ -1,9 +1,8 @@
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
-using SpatialPartitionSystem.Core;
 
-namespace SpatialPartitionSystem.Tests {
+namespace SpatialPartitionSystem.Core.OldSeries.Tests {
     public class SpatialTreeTests
     {
         private class TestSpatialObject : ISpatialObject<Rect>

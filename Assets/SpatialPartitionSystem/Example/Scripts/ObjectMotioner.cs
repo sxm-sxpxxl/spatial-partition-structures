@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using Random = UnityEngine.Random;
-using SpatialPartitionSystem.Core;
+using SpatialPartitionSystem.Core.OldSeries;
 
 namespace SpatialPartitionSystem.Example
 {

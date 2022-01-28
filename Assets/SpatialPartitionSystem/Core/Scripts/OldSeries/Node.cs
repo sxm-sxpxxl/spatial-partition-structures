@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace SpatialPartitionSystem.Core
+namespace SpatialPartitionSystem.Core.OldSeries
 {
     internal sealed class Node<TObject, TBounds> : IReadOnlyNode<TObject, TBounds>
         where TObject : class, ISpatialObject<TBounds>

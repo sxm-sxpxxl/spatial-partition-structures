@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace SpatialPartitionSystem.Core
+namespace SpatialPartitionSystem.Core.OldSeries
 {
     public interface IReadOnlyNode<TObject, TBounds>
         where TObject : class, ISpatialObject<TBounds>

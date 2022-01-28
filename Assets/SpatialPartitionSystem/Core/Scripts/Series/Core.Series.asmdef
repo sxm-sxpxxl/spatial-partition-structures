@@ -1,9 +1,7 @@
 {
-    "name": "Example",
+    "name": "Core.Series",
     "rootNamespace": "",
-    "references": [
-        "GUID:0b1d3ff28dfceaa499d2cbe72326e362"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

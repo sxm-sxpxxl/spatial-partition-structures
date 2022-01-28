@@ -1,17 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
-namespace SpatialPartitionSystem.Core
+namespace SpatialPartitionSystem.Core.OldSeries
 {
-    public sealed class TwoDimensionalSpatialGameObject : SpatialGameObject<Rect>
+    public class TwoDimensionalSpatialGameObject : SpatialGameObject<Rect>
     {
         [Tooltip("The rect bounds of that spatial object.")]
         [SerializeField] private Rect bounds = new Rect(Vector2.zero, Vector2.one) { center = Vector2.zero };
         [Tooltip("The plane orientation for debug visualization.")]
         [SerializeField] private PlaneOrientation planeOrientation = PlaneOrientation.XY;
 
-        private readonly Dictionary<PlaneOrientation, Quaternion> planeOrientationToRotationMap =
+        private readonly Dictionary<PlaneOrientation, Quaternion> _planeOrientationToRotationMap =
             new Dictionary<PlaneOrientation, Quaternion>
             {
                 {PlaneOrientation.XY, Quaternion.Euler(0f, 0f, 0f)},
@@ -28,10 +27,14 @@ namespace SpatialPartitionSystem.Core
 
         private void OnValidate()
         {
-            transform.rotation = planeOrientationToRotationMap[planeOrientation];
+            transform.rotation = _planeOrientationToRotationMap[planeOrientation];
         }
 
-        public override Rect Bounds => new Rect(Vector3.zero, BoundsSize) { center = (Vector3) bounds.center };
+        public override Rect Bounds
+        {
+            get => new Rect(Vector3.zero, BoundsSize) { center = (Vector3) bounds.center };
+            set => bounds = value;
+        }
 
         public override Rect LocalBounds => new Rect(Vector2.zero, BoundsSize) { center = LocalBoundsCenter };
 
@@ -41,7 +44,17 @@ namespace SpatialPartitionSystem.Core
         
         public override Vector3 LocalBoundsCenter => transform.localPosition + (Vector3) bounds.center;
 
-        public override Vector3 BoundsSize => bounds.size;
+        public override Vector3 BoundsCenter
+        {
+            get => bounds.center;
+            set => bounds.center = value;
+        }
+        
+        public override Vector3 BoundsSize
+        {
+            get => bounds.size;
+            set => bounds.size = value;
+        }
 
         public override Vector3 BoundsMin =>  bounds.min;
 

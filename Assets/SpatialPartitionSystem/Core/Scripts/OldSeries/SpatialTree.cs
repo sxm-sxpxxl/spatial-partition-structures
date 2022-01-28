@@ -4,13 +4,13 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Assertions;
 
-namespace SpatialPartitionSystem.Core
+namespace SpatialPartitionSystem.Core.OldSeries
 {
     public abstract class SpatialTree<TObject, TBounds>
         where TObject : class, ISpatialObject<TBounds>
         where TBounds : struct
     {
-        public int Count => Query(_root, _root.Bounds, 100).ToArray().Length;
+        public int Count => Query(_root.Bounds, 100).ToArray().Length;
         public int MaxObjects => _maxObjects;
         public int MaxDepth => _maxDepth;
 
@@ -201,9 +201,12 @@ namespace SpatialPartitionSystem.Core
         /// <param name="bounds">The bounds to check.</param>
         /// <param name="maxQueryObjects">The maximum number of query objects for more efficient memory allocation for the collection.</param>
         /// <returns></returns>
-        public IEnumerable<TObject> Query(TBounds bounds, int maxQueryObjects = 1000)
+        public IReadOnlyList<TObject> Query(TBounds bounds, int maxQueryObjects = 1000)
         {
-            return Query(_root, bounds, maxQueryObjects) ?? new TObject[0];
+            var queryObjects = new List<TObject>(capacity: maxQueryObjects);
+            TryQuery(_root, bounds, queryObjects);
+            
+            return queryObjects;
         }
 
         private bool TryAdd(TObject obj, Node<TObject, TBounds> node, int depth)
@@ -329,14 +332,12 @@ namespace SpatialPartitionSystem.Core
             return true;
         }
         
-        private IEnumerable<TObject> Query(Node<TObject, TBounds> node, TBounds queryBounds, int maxQueryObjects)
+        private bool TryQuery(Node<TObject, TBounds> node, TBounds queryBounds, List<TObject> queryObjects)
         {
             if (Intersects(node.Bounds, queryBounds) == false)
             {
-                return null;
+                return false;
             }
-            
-            var queryObjects = new List<TObject>(capacity: maxQueryObjects);
             
             if (node.IsLeaf)
             {
@@ -352,18 +353,11 @@ namespace SpatialPartitionSystem.Core
             {
                 for (int i = 0; i < node.Childrens.Length; i++)
                 {
-                    var childQueryObjects = Query(node.Childrens[i], queryBounds, (int) 0.5f * maxQueryObjects);
-                    
-                    if (childQueryObjects == null)
-                    {
-                        continue;
-                    }
-                        
-                    queryObjects.AddRange(childQueryObjects);
+                    TryQuery(node.Childrens[i], queryBounds, queryObjects);
                 }
             }
 
-            return queryObjects;
+            return true;
         }
         
         private bool TryGetSmallestNodeRelativeFor(

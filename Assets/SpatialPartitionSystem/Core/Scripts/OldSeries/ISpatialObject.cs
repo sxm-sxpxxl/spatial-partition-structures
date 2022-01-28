@@ -1,6 +1,4 @@
-﻿using UnityEngine;
-
-namespace SpatialPartitionSystem.Core
+﻿namespace SpatialPartitionSystem.Core.OldSeries
 {
     public interface ISpatialObject<TBounds> where TBounds : struct
     {
