@@ -13,28 +13,40 @@ namespace SpatialPartitionSystem.Core.Series
         public Bounds2DObject fObject;
         public Bounds2DObject gObject;
         public Bounds2DObject hObject;
+
+        private Quadtree<Transform> _quadtree;
         
+        private void OnDrawGizmos()
+        {
+            if (_quadtree == null)
+            {
+                return;
+            }
+
+            _quadtree.DebugDraw(transform);
+        }
+
         private void Start()
         {
-            var quadtree = new Quadtree<Transform>(GetComponent<Bounds2DObject>().Bounds, 2, 2, 2);
+            _quadtree = new Quadtree<Transform>(GetComponent<Bounds2DObject>().Bounds, 2, 2, 2);
 
-            quadtree.TryAdd(aObject.transform, aObject.Bounds);
-            quadtree.TryAdd(bObject.transform, bObject.Bounds);
-            quadtree.TryAdd(cObject.transform, cObject.Bounds);
-            quadtree.TryAdd(dObject.transform, dObject.Bounds);
-            quadtree.TryAdd(eObject.transform, eObject.Bounds);
-            quadtree.TryAdd(fObject.transform, fObject.Bounds);
-            quadtree.TryAdd(gObject.transform, gObject.Bounds);
+            _quadtree.TryAdd(aObject.transform, aObject.Bounds);
+            _quadtree.TryAdd(bObject.transform, bObject.Bounds);
+            _quadtree.TryAdd(cObject.transform, cObject.Bounds);
+            _quadtree.TryAdd(dObject.transform, dObject.Bounds);
+            _quadtree.TryAdd(eObject.transform, eObject.Bounds);
+            _quadtree.TryAdd(fObject.transform, fObject.Bounds);
+            _quadtree.TryAdd(gObject.transform, gObject.Bounds);
 
-            quadtree.TryRemove(aObject.transform, aObject.Bounds);
-            quadtree.TryRemove(bObject.transform, bObject.Bounds);
+            _quadtree.TryRemove(aObject.transform, aObject.Bounds);
+            _quadtree.TryRemove(bObject.transform, bObject.Bounds);
 
-            quadtree.TryAdd(hObject.transform, hObject.Bounds);
+            _quadtree.TryAdd(hObject.transform, hObject.Bounds);
 
-            quadtree.TryRemove(fObject.transform, fObject.Bounds);
-            quadtree.TryRemove(gObject.transform, gObject.Bounds);
+            _quadtree.TryRemove(fObject.transform, fObject.Bounds);
+            _quadtree.TryRemove(gObject.transform, gObject.Bounds);
             
-            quadtree.CleanUp();
+            _quadtree.CleanUp();
         }
 
         private void TestFreeList()

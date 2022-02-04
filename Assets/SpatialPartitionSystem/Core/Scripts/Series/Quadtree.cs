@@ -37,6 +37,14 @@ namespace SpatialPartitionSystem.Core.Series
             public AABB2D bounds;
         }
 
+        private struct TraverseData
+        {
+            public int childIndex;
+            public int childOffset;
+            public short childDepth;
+            public AABB2D parentBounds;
+        }
+
         public Quadtree(AABB2D bounds, int maxLeafObjects, int maxDepth, int initialObjectsCapacity)
         {
             _maxLeafObjects = maxLeafObjects;
@@ -54,21 +62,27 @@ namespace SpatialPartitionSystem.Core.Series
             _nodes.Add(root, out _rootIndex);
         }
 
+        public void DebugDraw(Transform relativeTransform, bool isPlaymodeOnly = false)
+        {
+            Assert.IsNotNull(relativeTransform);
+            var drawer = isPlaymodeOnly ? (IDebugDrawer) new PlaymodeOnlyDebugDrawer() : new GizmosDebugDrawer();
+            
+            Traverse(traverseData =>
+            {
+                var bounds = GetBoundsFor(traverseData.parentBounds, (QuadrantNumber) traverseData.childOffset);
+                var busyColor = _nodes[traverseData.childIndex].objectsCount == 0 ? Color.green : Color.red;
+
+                drawer.SetColor(busyColor);
+                        
+                var worldCenter = relativeTransform.TransformPoint(bounds.Center);
+                var worldSize = relativeTransform.TransformPoint(bounds.Size);
+
+                drawer.DrawWireCube(worldCenter, worldSize);
+            });
+        }
+
         public bool TryAdd(TObject obj, AABB2D objBounds)
         {
-            // + 1) find all leaves
-            // + 2) find target leaf among all leaves (*2)
-            // + 3) add object to target leaf
-            //      IF object fits to target leaf: + 3.1) create object to target leaf (*1)
-            //      ELSE: + 3.2) split target leaf
-            //              + 3.2.1) create 4 childrens
-            //              + 3.2.2) transfer data from parent leaf to children
-            //              + 3.2.3) find target leaf among children leaves (*2)
-            //              + 3.2.4) create object to target leaf (*1)
-            // -----------------------------------------------------------------------------
-            // *1 - create object to target leaf FUNCTION (...)
-            // *2 - find target leaf among given leaves FUNCTION (...)
-
             NodeWithBounds[] allLeaves = FindAllLeaves();
             
             if (FindTargetLeaf(allLeaves, objBounds, out NodeWithBounds targetLeaf) == false)
@@ -377,8 +391,7 @@ namespace SpatialPartitionSystem.Core.Series
         
         private NodeWithBounds[] FindAllLeaves()
         {
-            int branchCount = (int) (_nodes.Count / 4);
-            int leavesCount = _nodes.Count - branchCount;
+            int leavesCount = _nodes.Count - (int) (_nodes.Count / 4);
 
             NodeWithBounds[] allLeaves = new NodeWithBounds[leavesCount];
             int leafIndex = 0;
@@ -389,6 +402,40 @@ namespace SpatialPartitionSystem.Core.Series
                 return allLeaves;
             }
 
+            Traverse(traverseData =>
+            {
+                if (_nodes[traverseData.childIndex].isLeaf == false)
+                {
+                    return;
+                }
+                
+                allLeaves[leafIndex++] = new NodeWithBounds
+                {
+                    index = traverseData.childIndex,
+                    bounds = GetBoundsFor(traverseData.parentBounds, (QuadrantNumber) traverseData.childOffset),
+                    depth = traverseData.childDepth
+                };
+            });
+            
+            return allLeaves;
+        }
+
+        private void Traverse(Action<TraverseData> eachNodeAction)
+        {
+            int branchCount = (int) (_nodes.Count / 4);
+
+            if (branchCount == 0)
+            {
+                eachNodeAction.Invoke(new TraverseData
+                {
+                    childIndex = _rootIndex,
+                    childOffset = 0,
+                    childDepth = 0,
+                    parentBounds = _rootBounds
+                });
+                return;
+            }
+            
             NodeWithBounds[] branches = new NodeWithBounds[branchCount];
             branches[0] = new NodeWithBounds { index = _rootIndex, bounds = _rootBounds, depth = 0 };
             
@@ -402,21 +449,12 @@ namespace SpatialPartitionSystem.Core.Series
                 parentBounds = branches[traverseBranchIndex].bounds;
                 childDepth = (short) (branches[traverseBranchIndex].depth + 1);
                 firstChildIndex = _nodes[parentIndex].firstChildIndex;
-
+                
                 for (int childOffset = 0; childOffset < 4; childOffset++)
                 {
                     childIndex = firstChildIndex + childOffset;
 
-                    if (_nodes[childIndex].isLeaf)
-                    {
-                        allLeaves[leafIndex++] = new NodeWithBounds
-                        {
-                            index = childIndex,
-                            bounds = GetBoundsFor(parentBounds, (QuadrantNumber) childOffset),
-                            depth = childDepth
-                        };
-                    }
-                    else
+                    if (_nodes[childIndex].isLeaf == false)
                     {
                         branches[freeBranchIndex++] = new NodeWithBounds
                         {
@@ -425,19 +463,16 @@ namespace SpatialPartitionSystem.Core.Series
                             depth = childDepth
                         };
                     }
+
+                    eachNodeAction.Invoke(new TraverseData
+                    {
+                        childIndex = childIndex,
+                        childOffset = childOffset,
+                        childDepth = childDepth,
+                        parentBounds = parentBounds
+                    });
                 }
             }
-            
-            // all count | leaves count |
-            //      1           1
-            //      5           4
-            //      9           7
-            //      13          10
-            //      17          13
-            // ---------------------------
-            // leaves count = all count - (int) (all count / 4)
-            
-            return allLeaves;
         }
 
         private static AABB2D GetBoundsFor(AABB2D parentBounds, QuadrantNumber quadrantNumber)
