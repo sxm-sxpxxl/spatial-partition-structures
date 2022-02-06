@@ -4,7 +4,7 @@ using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    internal class FreeList<T>
+    internal sealed class FreeList<T>
     {
         private T[] _items;
         private Queue<int> _freeIndexes;
@@ -19,12 +19,12 @@ namespace SpatialPartitionSystem.Core.Series
         {
             get
             {
-                Assert.IsTrue(index < _items.Length);
+                Assert.IsTrue(index >= 0 && index < _items.Length);
                 return _items[index];
             }
             set
             {
-                Assert.IsTrue(index < _items.Length);
+                Assert.IsTrue(index >= 0 && index < _items.Length);
                 _items[index] = value;
             }
         }

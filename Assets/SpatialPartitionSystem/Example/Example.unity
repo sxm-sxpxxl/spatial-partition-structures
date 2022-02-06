@@ -661,7 +661,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eac9a29939724de6833046cc2e003b95, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  boundsColor: {r: 1, g: 1, b: 1, a: 1}
+  boundsColor: {r: 1, g: 1, b: 1, a: 0.050980393}
   bounds:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0.5, y: 0.5, z: 0}
