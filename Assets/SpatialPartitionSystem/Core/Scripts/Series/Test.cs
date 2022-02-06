@@ -33,31 +33,31 @@ namespace SpatialPartitionSystem.Core.Series
         {
             _quadtree = new Quadtree<Transform>(GetComponent<Bounds2DObject>().Bounds, 1, 4, 8);
 
-            _quadtree.TryAdd(aObject.transform, aObject.Bounds);
+            _quadtree.TryAdd(aObject.transform, aObject.Bounds, out _);
             list.Add(aObject);
             
-            _quadtree.TryAdd(bObject.transform, bObject.Bounds);
+            _quadtree.TryAdd(bObject.transform, bObject.Bounds, out _);
             list.Add(bObject);
             
-            _quadtree.TryAdd(cObject.transform, cObject.Bounds);
+            _quadtree.TryAdd(cObject.transform, cObject.Bounds, out _);
             list.Add(cObject);
             
-            _quadtree.TryAdd(dObject.transform, dObject.Bounds);
+            _quadtree.TryAdd(dObject.transform, dObject.Bounds, out _);
             list.Add(dObject);
             
-            _quadtree.TryAdd(eObject.transform, eObject.Bounds);
+            _quadtree.TryAdd(eObject.transform, eObject.Bounds, out _);
             list.Add(eObject);
             
-            _quadtree.TryAdd(fObject.transform, fObject.Bounds);
+            _quadtree.TryAdd(fObject.transform, fObject.Bounds, out _);
             list.Add(fObject);
             
-            _quadtree.TryAdd(gObject.transform, gObject.Bounds);
+            _quadtree.TryAdd(gObject.transform, gObject.Bounds, out _);
             list.Add(gObject);
 
             // _quadtree.TryRemove(aObject.transform, aObject.Bounds);
             // _quadtree.TryRemove(bObject.transform, bObject.Bounds);
             //
-            _quadtree.TryAdd(hObject.transform, hObject.Bounds);
+            _quadtree.TryAdd(hObject.transform, hObject.Bounds, out _);
             list.Add(hObject);
             //
             // _quadtree.TryRemove(fObject.transform, fObject.Bounds);
@@ -66,10 +66,10 @@ namespace SpatialPartitionSystem.Core.Series
 
         private void Update()
         {
-            for (int i = 0; i < list.Count; i++)
-            {
-                _quadtree.Update(list[i].transform, list[i].Bounds);
-            }
+            // for (int i = 0; i < list.Count; i++)
+            // {
+            //     _quadtree.TryUpdate(list[i].transform, list[i].Bounds);
+            // }
             
             _quadtree.CleanUp();
         }

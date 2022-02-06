@@ -2,6 +2,7 @@
 {
     internal struct NodeObject<TObject> where TObject : class
     {
+        public int leafIndex;
         public TObject target;
         public AABB2D bounds;
     }

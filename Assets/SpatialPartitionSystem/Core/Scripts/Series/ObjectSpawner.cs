@@ -11,7 +11,7 @@ namespace SpatialPartitionSystem.Core.Series
     public sealed class ObjectSpawner : MonoBehaviour
     {
         [Tooltip("The number of objects created.")]
-        [SerializeField, Range(1, 1000)] private int objectsCount = 10;
+        [SerializeField, Range(1, 3000)] private int objectsCount = 10;
         [Tooltip("The delay between object creation.")]
         [SerializeField, Range(0f, 5f)] private float creationDelay = 2f;
         

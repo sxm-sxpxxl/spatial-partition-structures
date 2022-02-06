@@ -567,7 +567,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 5
+  orthographic size: 0.75
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -1227,7 +1227,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 087e44d1b7b541809ddb5c2882cd0e68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxLeafObjects: 8
+  maxLeafObjects: 2
   maxDepth: 4
 --- !u!114 &2039316871
 MonoBehaviour:
@@ -1287,7 +1287,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   isMotionUpdated: 0
-  speed: 1
+  speed: 0.1
   onObjectUpdated:
     m_PersistentCalls:
       m_Calls:
