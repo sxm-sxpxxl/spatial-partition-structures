@@ -37,14 +37,6 @@ namespace SpatialPartitionSystem.Core.Series
             public AABB2D bounds;
         }
 
-        private struct TraverseData
-        {
-            public int childIndex;
-            public sbyte childOffset;
-            public sbyte childDepth;
-            public AABB2D parentBounds;
-        }
-
         public Quadtree(AABB2D bounds, sbyte maxLeafObjects, sbyte maxDepth, int initialObjectsCapacity)
         {
             _maxLeafObjects = maxLeafObjects;
@@ -66,15 +58,13 @@ namespace SpatialPartitionSystem.Core.Series
             Assert.IsNotNull(relativeTransform);
             var drawer = isPlaymodeOnly ? (IDebugDrawer) new PlaymodeOnlyDebugDrawer() : new GizmosDebugDrawer();
             
-            Traverse(traverseData =>
+            Traverse(childData =>
             {
-                var bounds = GetBoundsFor(traverseData.parentBounds, (QuadrantNumber) traverseData.childOffset);
-                var busyColor = _nodes[traverseData.childIndex].objectsCount == 0 ? Color.green : Color.red;
-
+                var busyColor = _nodes[childData.index].objectsCount == 0 ? Color.green : Color.red;
                 drawer.SetColor(busyColor);
                         
-                var worldCenter = relativeTransform.TransformPoint(bounds.Center);
-                var worldSize = relativeTransform.TransformPoint(bounds.Size);
+                var worldCenter = relativeTransform.TransformPoint(childData.bounds.Center);
+                var worldSize = relativeTransform.TransformPoint(childData.bounds.Size);
 
                 drawer.DrawWireCube(worldCenter, worldSize);
             });
@@ -520,36 +510,35 @@ namespace SpatialPartitionSystem.Core.Series
                 return allLeaves;
             }
 
-            Traverse(traverseData =>
+            Traverse(childData =>
             {
-                if (_nodes[traverseData.childIndex].isLeaf == false)
+                if (_nodes[childData.index].isLeaf == false)
                 {
                     return;
                 }
                 
                 allLeaves[leafIndex++] = new NodeWithBounds
                 {
-                    index = traverseData.childIndex,
-                    bounds = GetBoundsFor(traverseData.parentBounds, (QuadrantNumber) traverseData.childOffset),
-                    depth = traverseData.childDepth
+                    index = childData.index,
+                    bounds = childData.bounds,
+                    depth = childData.depth
                 };
             });
             
             return allLeaves;
         }
 
-        private void Traverse(Action<TraverseData> eachNodeAction)
+        private void Traverse(Action<NodeWithBounds> eachNodeAction)
         {
             int branchCount = (int) (_nodes.Count / 4);
 
             if (branchCount == 0)
             {
-                eachNodeAction.Invoke(new TraverseData
+                eachNodeAction.Invoke(new NodeWithBounds
                 {
-                    childIndex = _rootIndex,
-                    childOffset = 0,
-                    childDepth = 0,
-                    parentBounds = _rootBounds
+                    index = _rootIndex,
+                    depth = 0,
+                    bounds = _rootBounds
                 });
                 return;
             }
@@ -582,12 +571,11 @@ namespace SpatialPartitionSystem.Core.Series
                         };
                     }
 
-                    eachNodeAction.Invoke(new TraverseData
+                    eachNodeAction.Invoke(new NodeWithBounds
                     {
-                        childIndex = childIndex,
-                        childOffset = childOffset,
-                        childDepth = childDepth,
-                        parentBounds = parentBounds
+                        index = childIndex,
+                        depth = childDepth,
+                        bounds = GetBoundsFor(parentBounds, (QuadrantNumber) childOffset)
                     });
                 }
             }
