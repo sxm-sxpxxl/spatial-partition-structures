@@ -4,9 +4,6 @@ using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    // todo: необходимо решить проблему с производительностью Update, т.к. на текущий момент FindAllLeaves, FindLinkedLeaf в каждом кадре для каждого экземпляры слишком сложно.
-    // todo: предлагаю добавить NodeObject ссылку по индексу на linked leaf, а клиенту Quadtree возвращать обертку с хранящимся индексом _objects для созданного объекта, который нужно затем передавать в Update/Remove и др.
-    // todo: В итоге на каждую проверку должно быть два константных обращения по индексу и Intersects для границ - самое необходимое для цикла Update.
     public class Quadtree<TObject> where TObject : class
     {
         private const sbyte NULL = -1;
@@ -17,9 +14,9 @@ namespace SpatialPartitionSystem.Core.Series
         private readonly FreeList<NodeObject<TObject>> _objects;
 
         private readonly sbyte _maxLeafObjects, _maxDepth;
-
         private readonly int _rootIndex;
-        // private readonly AABB2D _rootBounds;
+        
+        private bool[] _missingObjects;
 
         private enum QuadrantNumber
         {
@@ -39,6 +36,7 @@ namespace SpatialPartitionSystem.Core.Series
             _nodes = new FreeList<Node>(maxNodesCount);
             _objectPointers = new FreeList<ObjectPointer>(initialObjectsCapacity);
             _objects = new FreeList<NodeObject<TObject>>(initialObjectsCapacity);
+            _missingObjects = new bool[initialObjectsCapacity];
 
             _nodes.Add(new Node
             {
@@ -53,8 +51,8 @@ namespace SpatialPartitionSystem.Core.Series
         public void DebugDraw(Transform relativeTransform, bool isPlaymodeOnly = false)
         {
             Assert.IsNotNull(relativeTransform);
-            var drawer = isPlaymodeOnly ? (IDebugDrawer) new PlaymodeOnlyDebugDrawer() : new GizmosDebugDrawer();
             
+            var drawer = isPlaymodeOnly ? (IDebugDrawer) new PlaymodeOnlyDebugDrawer() : new GizmosDebugDrawer();
             Traverse(childIndex =>
             {
                 var busyColor = _nodes[childIndex].objectsCount == 0 ? Color.green : Color.red;
@@ -88,7 +86,7 @@ namespace SpatialPartitionSystem.Core.Series
         {
             Assert.IsTrue(objectIndex >= 0 && objectIndex < _objects.Capacity);
             
-            int linkedLeafIndex = FindLinkedLeafIndex(objectIndex);
+            int linkedLeafIndex = _objects[objectIndex].leafIndex;
             if (linkedLeafIndex == NULL)
             {
                 return false;
@@ -168,54 +166,55 @@ namespace SpatialPartitionSystem.Core.Series
             }
         }
 
-        public bool TryUpdate(TObject obj, AABB2D objBounds, int objectIndex, out int newObjectIndex)
+        public int Update(int objectIndex, TObject updatedObj, AABB2D updatedObjBounds)
         {
-            // Assert.IsTrue(objectIndex >= 0 && objectIndex < _objects.Capacity);
+            Assert.IsTrue(objectIndex >= 0 && objectIndex < _objects.Capacity);
+            Assert.IsNotNull(updatedObj);
 
-            if (objectIndex == NULL)
+            int newObjectIndex;
+
+            if (IsObjectMissing(objectIndex))
             {
-                TryAdd(obj, objBounds, out newObjectIndex);
-                return true;
-            }
-            
-            int linkedLeafIndex = FindLinkedLeafIndex(objectIndex);
-            
-            if (linkedLeafIndex != NULL)
-            {
-                if (_nodes[linkedLeafIndex].bounds.Intersects(objBounds))
+                if (TryAdd(updatedObj, updatedObjBounds, out newObjectIndex) == false)
                 {
-                    newObjectIndex = objectIndex;
-                    return false;
+                    return objectIndex;
                 }
                 
-                Remove(objectIndex);
+                _missingObjects[objectIndex] = false;
+                return newObjectIndex;
+            }
+            
+            int linkedLeafIndex = _objects[objectIndex].leafIndex;
+            Assert.IsTrue(linkedLeafIndex >= 0 && linkedLeafIndex < _nodes.Capacity);
+
+            if (_nodes[linkedLeafIndex].bounds.Intersects(updatedObjBounds))
+            {
+                return objectIndex;
+            }
+                
+            Remove(objectIndex);
+
+            if (TryAdd(updatedObj, updatedObjBounds, out newObjectIndex) == false)
+            {
+                _missingObjects[objectIndex] = true;
+                return objectIndex;
             }
 
-            return TryAdd(obj, objBounds, out newObjectIndex);
+            return newObjectIndex;
+        }
 
-            // ------------------------------------------------------------------------------
-            // int[] allLeavesIndexes = FindAllLeavesIndexes();
-            // int linkedLeafIndex = FindLinkedLeafIndex(allLeavesIndexes, obj);
-            //
-            // if (linkedLeafIndex != NULL)
-            // {
-            //     if (_nodes[linkedLeafIndex].bounds.Intersects(objBounds))
-            //     {
-            //         return;
-            //     }
-            //     
-            //     Remove(linkedLeafIndex, obj);
-            // }
-            //
-            // int targetLeafIndex = FindTargetLeafIndex(allLeavesIndexes, objBounds);
-            //
-            // if (targetLeafIndex == NULL)
-            // {
-            //     return;
-            // }
-            //
-            // Add(targetLeafIndex, obj, objBounds);
-            // ------------------------------------------------------------------------------
+        private bool IsObjectMissing(int objectIndex)
+        {
+            Assert.IsTrue(objectIndex >= 0 && objectIndex < _objects.Capacity);
+
+            if (objectIndex >= _missingObjects.Length)
+            {
+                bool[] newArray = new bool[_objects.Capacity];
+                _missingObjects.CopyTo(newArray, 0);
+                _missingObjects = newArray;
+            }
+
+            return _missingObjects[objectIndex];
         }
 
         private int Add(int leafIndex, TObject obj, AABB2D objBounds)
@@ -243,16 +242,11 @@ namespace SpatialPartitionSystem.Core.Series
             Assert.IsTrue(_nodes[leafIndex].isLeaf);
             
             int[] unlinkedPointersIndexes = UnlinkObjectPointersFrom(leafIndex);
-            ObjectPointer unlinkedObjectPointer;
-            int nextObjectPointerIndex;
-
+            
             for (int i = 0; i < unlinkedPointersIndexes.Length; i++)
             {
-                unlinkedObjectPointer = _objectPointers[unlinkedPointersIndexes[i]];
-
-                if (unlinkedObjectPointer.objectIndex == objectIndex)
+                if (_objectPointers[unlinkedPointersIndexes[i]].objectIndex == objectIndex)
                 {
-                    nextObjectPointerIndex = unlinkedObjectPointer.nextObjectPointerIndex;
                     DeleteObject(unlinkedPointersIndexes[i]);
                 }
                 else
@@ -268,8 +262,6 @@ namespace SpatialPartitionSystem.Core.Series
             Assert.IsTrue(_nodes[leafIndex].isLeaf);
             Assert.IsNotNull(obj);
 
-            Node leaf = _nodes[leafIndex];
-            
             int[] childrenIndexes = new int[4];
             for (int i = 0; i < 4; i++)
             {
@@ -278,8 +270,8 @@ namespace SpatialPartitionSystem.Core.Series
                     firstChildIndex = NULL,
                     objectsCount = 0,
                     isLeaf = true,
-                    depth = (sbyte) (leaf.depth + 1),
-                    bounds = GetBoundsFor(leaf.bounds, (QuadrantNumber) i)
+                    depth = (sbyte) (_nodes[leafIndex].depth + 1),
+                    bounds = GetBoundsFor(_nodes[leafIndex].bounds, (QuadrantNumber) i)
                 }, out childrenIndexes[i]);
             }
 
@@ -386,50 +378,6 @@ namespace SpatialPartitionSystem.Core.Series
             return unlinkedObjects;
         }
 
-        private bool IsLinkedWithObjectPointer(int objectPointerIndex, TObject obj)
-        {
-            Assert.IsTrue(objectPointerIndex >= 0 && objectPointerIndex < _objectPointers.Capacity);
-            Assert.IsNotNull(obj);
-            
-            int objectIndex = _objectPointers[objectPointerIndex].objectIndex;
-            return _objects[objectIndex].target == obj;
-        }
-
-        private bool IsLinkedWithLeaf(int leafIndex, TObject obj)
-        {
-            Assert.IsTrue(leafIndex >= 0 && leafIndex < _nodes.Capacity);
-            Assert.IsTrue(_nodes[leafIndex].isLeaf);
-            Assert.IsNotNull(obj);
-
-            Node node = _nodes[leafIndex];
-            
-            if (node.isLeaf == false || node.objectsCount == 0)
-            {
-                return false;
-            }
-            
-            int currentPointerIndex = node.firstChildIndex;
-            ObjectPointer currentPointer = _objectPointers[currentPointerIndex];
-
-            if (IsLinkedWithObjectPointer(currentPointerIndex, obj))
-            {
-                return true;
-            }
-
-            while (currentPointer.nextObjectPointerIndex != NULL)
-            {
-                currentPointerIndex = currentPointer.nextObjectPointerIndex;
-                currentPointer = _objectPointers[currentPointerIndex];
-
-                if (IsLinkedWithObjectPointer(currentPointerIndex, obj))
-                {
-                    return true;
-                }
-            }
-            
-            return false;
-        }
-
         private void LinkChildrenNodesTo(int leafIndex, int firstChildIndex)
         {
             Assert.IsTrue(firstChildIndex >= 0 && firstChildIndex < _nodes.Capacity);
@@ -468,10 +416,18 @@ namespace SpatialPartitionSystem.Core.Series
             Assert.IsTrue(_nodes[leafIndex].isLeaf);
             Assert.IsNotNull(obj);
             
-            _objects.Add(new NodeObject<TObject> { leafIndex = leafIndex, target = obj, bounds = objBounds }, out int newObjectIndex);
+            _objects.Add(new NodeObject<TObject>
+            {
+                leafIndex = leafIndex,
+                target = obj,
+                bounds = objBounds
+            }, out int newObjectIndex);
             
-            var newObjectPointer = new ObjectPointer { objectIndex = newObjectIndex, nextObjectPointerIndex = NULL };
-            _objectPointers.Add(newObjectPointer, out int newObjectPointerIndex);
+            _objectPointers.Add(new ObjectPointer
+            {
+                objectIndex = newObjectIndex,
+                nextObjectPointerIndex = NULL
+            }, out int newObjectPointerIndex);
 
             LinkObjectPointerTo(leafIndex, newObjectPointerIndex);
 
@@ -501,28 +457,6 @@ namespace SpatialPartitionSystem.Core.Series
             return NULL;
         }
 
-        private int FindLinkedLeafIndex(int[] leavesIndexes, TObject obj)
-        {
-            Assert.IsNotNull(leavesIndexes);
-            Assert.IsNotNull(obj);
-            
-            for (int i = 0; i < leavesIndexes.Length; i++)
-            {
-                if (IsLinkedWithLeaf(leavesIndexes[i], obj))
-                {
-                    return leavesIndexes[i];
-                }
-            }
-            
-            return NULL;
-        }
-
-        private int FindLinkedLeafIndex(int objectIndex)
-        {
-            Assert.IsTrue(objectIndex >= 0 && objectIndex < _objects.Capacity);
-            return _objects[objectIndex].leafIndex;
-        }
-        
         private int[] FindAllLeavesIndexes()
         {
             int leavesCount = _nodes.Count - (int) (_nodes.Count / 4);
@@ -559,14 +493,14 @@ namespace SpatialPartitionSystem.Core.Series
                 return;
             }
             
-            int[] branches = new int[branchCount];
-            branches[0] = _rootIndex;
+            int[] branchesIndexes = new int[branchCount];
+            branchesIndexes[0] = _rootIndex;
             
             int parentIndex, firstChildIndex, childIndex;
             
             for (int traverseBranchIndex = 0, freeBranchIndex = 1; traverseBranchIndex < branchCount; traverseBranchIndex++)
             {
-                parentIndex = branches[traverseBranchIndex];
+                parentIndex = branchesIndexes[traverseBranchIndex];
                 firstChildIndex = _nodes[parentIndex].firstChildIndex;
                 
                 for (sbyte childOffset = 0; childOffset < 4; childOffset++)
@@ -575,7 +509,7 @@ namespace SpatialPartitionSystem.Core.Series
 
                     if (_nodes[childIndex].isLeaf == false)
                     {
-                        branches[freeBranchIndex++] = childIndex;
+                        branchesIndexes[freeBranchIndex++] = childIndex;
                     }
 
                     eachNodeAction.Invoke(childIndex);

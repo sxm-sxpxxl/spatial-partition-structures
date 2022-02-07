@@ -33,13 +33,17 @@ namespace SpatialPartitionSystem.Core.Series
 
         public void AddObject(Bounds2DObject obj)
         {
-            _quadtree.TryAdd(obj.Transform, obj.Bounds, out int objectIndex);
+            if (_quadtree.TryAdd(obj.Transform, obj.Bounds, out int objectIndex) == false)
+            {
+                return;
+            }
+            
             map.Add(obj, objectIndex);
         }
 
         public void UpdateObject(Bounds2DObject obj)
         {
-            _quadtree.TryUpdate(obj.Transform, obj.Bounds, map[obj], out int newObjectIndex);
+            int newObjectIndex = _quadtree.Update(map[obj], obj.Transform, obj.Bounds);
             map[obj] = newObjectIndex;
         }
 

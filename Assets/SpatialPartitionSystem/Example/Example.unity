@@ -911,7 +911,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35b4ba084f184d659b21c07853d709d8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  objectsCount: 100
+  objectsCount: 1000
   creationDelay: 0
   objectPrefab: {fileID: 8861645927252954752, guid: 11123b84ba285eb47a60381e35e14469, type: 3}
   objectsContainer: {fileID: 682947789}
@@ -959,10 +959,10 @@ MonoBehaviour:
   boundsColor: {r: 0, g: 0, b: 0, a: 1}
   bounds:
     serializedVersion: 2
-    x: -1
-    y: -1
-    width: 2
-    height: 2
+    x: -0.5
+    y: -0.5
+    width: 1
+    height: 1
   planeOrientation: 0
 --- !u!114 &1265600774
 MonoBehaviour:
@@ -976,8 +976,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75d883ea478b45079da3b8f3767c3756, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isMotionUpdated: 0
-  speed: 1
+  isMotionUpdated: 1
+  speed: 0.1
   onObjectUpdated:
     m_PersistentCalls:
       m_Calls:
@@ -1017,12 +1017,12 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1464039749}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
-  m_Father: {fileID: 0}
-  m_RootOrder: 5
+  m_Father: {fileID: 2039316868}
+  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1584323742
 GameObject:
@@ -1195,7 +1195,8 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
+  m_Children:
+  - {fileID: 1464039750}
   m_Father: {fileID: 0}
   m_RootOrder: 4
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1241,7 +1242,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3e58ce93b86f4aa1891c54d5202b5c10, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  objectsCount: 100
+  objectsCount: 10
   creationDelay: 0
   objectPrefab: {fileID: 252592213597523492, guid: 4898c96667dceb84b9626262b83a149e, type: 3}
   objectsContainer: {fileID: 1464039750}
@@ -1286,7 +1287,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 477ab323d65449949e73be0cb07e0626, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isMotionUpdated: 0
+  isMotionUpdated: 1
   speed: 0.1
   onObjectUpdated:
     m_PersistentCalls:
