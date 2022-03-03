@@ -60,12 +60,12 @@ namespace SpatialPartitionSystem.Core.Series
             int newObjectIndex = _quadtree.Update(treeNodesMap[obj], obj.Transform, obj.Bounds);
             treeNodesMap[obj] = newObjectIndex;
             
-            if (queryBoundsObj == null)
-            {
-                return;
-            }
+            // if (queryBoundsObj == null)
+            // {
+            //     return;
+            // }
 
-            queryObjects = _quadtree.Query(queryBoundsObj.Bounds);
+            // queryObjects = _quadtree.Query(queryBoundsObj.Bounds);
         }
 
         public void CleanUp()

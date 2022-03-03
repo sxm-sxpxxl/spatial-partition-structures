@@ -16,9 +16,6 @@ namespace SpatialPartitionSystem.Core.Series
         [SerializeField, Range(0.1f, 10f)] private float speed = 1f;
 
         [Space]
-        [SerializeField, Range(10, 120)] private int targetFramerate = 60;
-
-        [Space]
         [SerializeField] private UnityEvent<Bounds2DObject> onObjectUpdated = new UnityEvent<Bounds2DObject>();
         [SerializeField] private UnityEvent onAllObjectsUpdated = new UnityEvent();
         

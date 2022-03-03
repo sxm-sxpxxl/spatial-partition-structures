@@ -18,8 +18,9 @@ namespace SpatialPartitionSystem.Core.Series
         private readonly int _rootIndex;
         
         private bool[] _missingObjects;
-
         private readonly List<TObject> _queryObjects;
+
+        private int CurrentBranchCount => (int) (_nodes.Count / 4);
 
         private enum QuadrantNumber
         {
@@ -28,7 +29,7 @@ namespace SpatialPartitionSystem.Core.Series
             Three = 2,
             Four = 3
         }
-        
+
         public Quadtree(AABB2D bounds, sbyte maxLeafObjects, sbyte maxDepth, int initialObjectsCapacity)
         {
             _maxLeafObjects = maxLeafObjects;
@@ -96,77 +97,84 @@ namespace SpatialPartitionSystem.Core.Series
                 return false;
             }
             
-            Remove(linkedLeafIndex);
+            Remove(objectIndex);
             return true;
         }
 
         public void CleanUp()
         {
-            int branchCount = (int) (_nodes.Count / 4);
-            
-            if (branchCount == 0)
+            if (CurrentBranchCount == 0)
             {
                 return;
             }
             
-            int[] branchIndexes = new int[branchCount];
+            int[] branchIndexes = new int[CurrentBranchCount];
             branchIndexes[0] = _rootIndex;
             
-            int parentIndex, firstChildIndex, childIndex, childrenObjectsCount;
-            bool isCleanUpPossible, hasBranchAmonthChildren;
+            int parentBranchIndex, childIndex, childrenObjectsCount;
+            bool isCleanUpPossible, hasBranchAmongChildren, isNeedAnotherCleanUp = true;
             
-            for (int traverseBranchIndex = 0, freeBranchIndex = 1; traverseBranchIndex < branchCount; traverseBranchIndex++)
+            while (isNeedAnotherCleanUp)
             {
-                parentIndex = branchIndexes[traverseBranchIndex];
-                firstChildIndex = _nodes[parentIndex].firstChildIndex;
-            
-                childrenObjectsCount = 0;
-                isCleanUpPossible = false;
-                hasBranchAmonthChildren = false;
+                isNeedAnotherCleanUp = false;
                 
-                for (byte childOffset = 0; childOffset < 4; childOffset++)
+                for (int traverseBranchIndex = 0, freeBranchIndex = 1; traverseBranchIndex < CurrentBranchCount; traverseBranchIndex++)
                 {
-                    childIndex = firstChildIndex + childOffset;
-            
-                    if (_nodes[childIndex].isLeaf == false)
-                    {
-                        branchIndexes[freeBranchIndex++] = childIndex;
-                        hasBranchAmonthChildren = true;
-                        
-                        continue;
-                    }
+                    parentBranchIndex = branchIndexes[traverseBranchIndex];
+                
+                    childrenObjectsCount = 0;
+                    isCleanUpPossible = hasBranchAmongChildren = false;
                     
-                    childrenObjectsCount += _nodes[childIndex].objectsCount;
-                    isCleanUpPossible = hasBranchAmonthChildren == false && childOffset == 3 && childrenObjectsCount <= _maxLeafObjects;
+                    for (byte childOffset = 0; childOffset < 4; childOffset++)
+                    {
+                        childIndex = _nodes[parentBranchIndex].firstChildIndex + childOffset;
+                
+                        if (_nodes[childIndex].isLeaf == false)
+                        {
+                            branchIndexes[freeBranchIndex++] = childIndex;
+                            hasBranchAmongChildren = true;
+                            
+                            continue;
+                        }
+                        
+                        childrenObjectsCount += _nodes[childIndex].objectsCount;
+                        isCleanUpPossible = hasBranchAmongChildren == false && childOffset == 3 && childrenObjectsCount <= _maxLeafObjects;
+                    }
+
+                    if (isCleanUpPossible)
+                    {
+                        CleanUp(parentBranchIndex, childrenObjectsCount);
+                        isNeedAnotherCleanUp = true;
+                    }
                 }
+            }
+        }
+
+        private void CleanUp(int parentBranchIndex, int childrenObjectsCount)
+        {
+            int firstChildIndex = _nodes[parentBranchIndex].firstChildIndex;
+            int[] childrenUnlinkedPointerIndexes = new int[childrenObjectsCount];
             
-                if (isCleanUpPossible == false)
+            for (int i = 0, j = 0; i < 4; i++)
+            {
+                int[] unlinkedPointerIndexes = UnlinkObjectPointersFrom(firstChildIndex + i);
+
+                if (unlinkedPointerIndexes == null)
                 {
                     continue;
                 }
-            
-                int[] childrenUnlinkedPointerIndexes = new int[childrenObjectsCount];
-                for (int i = 0, j = 0; i < 4; i++)
+
+                for (int k = 0; k < unlinkedPointerIndexes.Length; k++)
                 {
-                    int[] unlinkedPointerIndexes = UnlinkObjectPointersFrom(firstChildIndex + i);
-            
-                    if (unlinkedPointerIndexes == null)
-                    {
-                        continue;
-                    }
-                    
-                    for (int k = 0; k < unlinkedPointerIndexes.Length; k++)
-                    {
-                        childrenUnlinkedPointerIndexes[j++] = unlinkedPointerIndexes[k];
-                    }
+                    childrenUnlinkedPointerIndexes[j++] = unlinkedPointerIndexes[k];
                 }
-                
-                DeleteChildrenNodesFor(parentIndex);
-                
-                for (int i = 0; i < childrenUnlinkedPointerIndexes.Length; i++)
-                {
-                    LinkObjectPointerTo(parentIndex, childrenUnlinkedPointerIndexes[i]);
-                }
+            }
+
+            DeleteChildrenNodesFor(parentBranchIndex);
+
+            for (int i = 0; i < childrenUnlinkedPointerIndexes.Length; i++)
+            {
+                LinkObjectPointerTo(parentBranchIndex, childrenUnlinkedPointerIndexes[i]);
             }
         }
 
@@ -543,20 +551,18 @@ namespace SpatialPartitionSystem.Core.Series
 
         private void Traverse(Action<int> eachNodeAction)
         {
-            int branchCount = (int) (_nodes.Count / 4);
-
-            if (branchCount == 0)
+            if (CurrentBranchCount == 0)
             {
                 eachNodeAction.Invoke(_rootIndex);
                 return;
             }
             
-            int[] branchesIndexes = new int[branchCount];
+            int[] branchesIndexes = new int[CurrentBranchCount];
             branchesIndexes[0] = _rootIndex;
             
             int parentIndex, firstChildIndex, childIndex;
             
-            for (int traverseBranchIndex = 0, freeBranchIndex = 1; traverseBranchIndex < branchCount; traverseBranchIndex++)
+            for (int traverseBranchIndex = 0, freeBranchIndex = 1; traverseBranchIndex < CurrentBranchCount; traverseBranchIndex++)
             {
                 parentIndex = branchesIndexes[traverseBranchIndex];
                 firstChildIndex = _nodes[parentIndex].firstChildIndex;
