@@ -11,11 +11,14 @@ namespace SpatialPartitionSystem.Core.Series
         [SerializeField, Range(1, 16)] private sbyte maxLeafObjects = 8;
         [Tooltip("The maximum depth of the tree. Non-fitting objects are placed in already created nodes.")]
         [SerializeField, Range(1, 8)] private sbyte maxDepth = 4;
+
+        [Space]
+        [SerializeField] private Bounds2DObject queryBoundsObj;
         
         private Quadtree<Transform> _quadtree;
-
-        private readonly Dictionary<Bounds2DObject, int> map = new Dictionary<Bounds2DObject, int>(capacity: 100);
-
+        private readonly Dictionary<Bounds2DObject, int> treeNodesMap = new Dictionary<Bounds2DObject, int>(capacity: 100);
+        private IReadOnlyList<Transform> queryObjects;
+        
         private void OnDrawGizmos()
         {
             if (_quadtree == null)
@@ -24,6 +27,17 @@ namespace SpatialPartitionSystem.Core.Series
             }
             
             _quadtree.DebugDraw(relativeTransform: transform);
+
+            if (queryObjects == null)
+            {
+                return;
+            }
+            
+            Gizmos.color = Color.black;
+            for (int i = 0; i < queryObjects.Count; i++)
+            {
+                Gizmos.DrawSphere(queryObjects[i].position, 0.025f);
+            }
         }
         
         private void Awake()
@@ -38,13 +52,20 @@ namespace SpatialPartitionSystem.Core.Series
                 return;
             }
             
-            map.Add(obj, objectIndex);
+            treeNodesMap.Add(obj, objectIndex);
         }
 
         public void UpdateObject(Bounds2DObject obj)
         {
-            int newObjectIndex = _quadtree.Update(map[obj], obj.Transform, obj.Bounds);
-            map[obj] = newObjectIndex;
+            int newObjectIndex = _quadtree.Update(treeNodesMap[obj], obj.Transform, obj.Bounds);
+            treeNodesMap[obj] = newObjectIndex;
+            
+            if (queryBoundsObj == null)
+            {
+                return;
+            }
+
+            queryObjects = _quadtree.Query(queryBoundsObj.Bounds);
         }
 
         public void CleanUp()
@@ -54,7 +75,7 @@ namespace SpatialPartitionSystem.Core.Series
 
         public void RemoveObject(Bounds2DObject obj)
         {
-            _quadtree.TryRemove(map[obj]);
+            _quadtree.TryRemove(treeNodesMap[obj]);
         }
     }
 }

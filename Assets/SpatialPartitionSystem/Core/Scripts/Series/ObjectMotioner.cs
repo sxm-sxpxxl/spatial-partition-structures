@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -13,6 +14,9 @@ namespace SpatialPartitionSystem.Core.Series
         [SerializeField] private bool isMotionUpdated = false;
         [Tooltip("The speed of the object motion (unit per second).")]
         [SerializeField, Range(0.1f, 10f)] private float speed = 1f;
+
+        [Space]
+        [SerializeField, Range(10, 120)] private int targetFramerate = 60;
 
         [Space]
         [SerializeField] private UnityEvent<Bounds2DObject> onObjectUpdated = new UnityEvent<Bounds2DObject>();
@@ -59,7 +63,7 @@ namespace SpatialPartitionSystem.Core.Series
                 UpdatePositionFor(_objects[i]);
                 onObjectUpdated.Invoke(_objects[i].target);
             }
-
+            
             onAllObjectsUpdated.Invoke();
         }
         

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
 
@@ -18,6 +19,8 @@ namespace SpatialPartitionSystem.Core.Series
         
         private bool[] _missingObjects;
 
+        private readonly List<TObject> _queryObjects;
+
         private enum QuadrantNumber
         {
             One = 0,
@@ -25,7 +28,7 @@ namespace SpatialPartitionSystem.Core.Series
             Three = 2,
             Four = 3
         }
-
+        
         public Quadtree(AABB2D bounds, sbyte maxLeafObjects, sbyte maxDepth, int initialObjectsCapacity)
         {
             _maxLeafObjects = maxLeafObjects;
@@ -37,7 +40,8 @@ namespace SpatialPartitionSystem.Core.Series
             _objectPointers = new FreeList<ObjectPointer>(initialObjectsCapacity);
             _objects = new FreeList<NodeObject<TObject>>(initialObjectsCapacity);
             _missingObjects = new bool[initialObjectsCapacity];
-
+            _queryObjects = new List<TObject>(capacity: initialObjectsCapacity);
+            
             _nodes.Add(new Node
             {
                 firstChildIndex = NULL,
@@ -53,13 +57,13 @@ namespace SpatialPartitionSystem.Core.Series
             Assert.IsNotNull(relativeTransform);
             
             var drawer = isPlaymodeOnly ? (IDebugDrawer) new PlaymodeOnlyDebugDrawer() : new GizmosDebugDrawer();
-            Traverse(childIndex =>
+            Traverse(nodeIndex =>
             {
-                var busyColor = _nodes[childIndex].objectsCount == 0 ? Color.green : Color.red;
+                var busyColor = _nodes[nodeIndex].objectsCount == 0 ? Color.green : Color.red;
                 drawer.SetColor(busyColor);
                         
-                var worldCenter = relativeTransform.TransformPoint(_nodes[childIndex].bounds.Center);
-                var worldSize = relativeTransform.TransformPoint(_nodes[childIndex].bounds.Size);
+                var worldCenter = relativeTransform.TransformPoint(_nodes[nodeIndex].bounds.Center);
+                var worldSize = relativeTransform.TransformPoint(_nodes[nodeIndex].bounds.Size);
 
                 drawer.DrawWireCube(worldCenter, worldSize);
             });
@@ -172,7 +176,7 @@ namespace SpatialPartitionSystem.Core.Series
             Assert.IsNotNull(updatedObj);
 
             int newObjectIndex;
-
+            
             if (IsObjectMissing(objectIndex))
             {
                 if (TryAdd(updatedObj, updatedObjBounds, out newObjectIndex) == false)
@@ -189,6 +193,13 @@ namespace SpatialPartitionSystem.Core.Series
 
             if (_nodes[linkedLeafIndex].bounds.Intersects(updatedObjBounds))
             {
+                NodeObject<TObject> nodeObject = _objects[objectIndex];
+
+                nodeObject.target = updatedObj;
+                nodeObject.bounds = updatedObjBounds;
+                
+                _objects[objectIndex] = nodeObject;
+                
                 return objectIndex;
             }
                 
@@ -201,6 +212,53 @@ namespace SpatialPartitionSystem.Core.Series
             }
 
             return newObjectIndex;
+        }
+
+        public IReadOnlyList<TObject> Query(AABB2D queryBounds)
+        {
+            _queryObjects.Clear();
+            
+            Traverse(nodeIndex =>
+            {
+                if (_nodes[nodeIndex].isLeaf == false || queryBounds.Intersects(_nodes[nodeIndex].bounds) == false)
+                {
+                    return;
+                }
+            
+                TraverseObjects(nodeIndex, objectIndex =>
+                {
+                    if (queryBounds.Intersects(_objects[objectIndex].bounds))
+                    {
+                        _queryObjects.Add(_objects[objectIndex].target);
+                    }
+                });
+            });
+
+            return _queryObjects;
+        }
+
+        private void TraverseObjects(int nodeIndex, Action<int> objectAction = null)
+        {
+            Assert.IsTrue(nodeIndex >= 0 && nodeIndex < _nodes.Capacity);
+            Assert.IsTrue(_nodes[nodeIndex].isLeaf);
+
+            if (_nodes[nodeIndex].objectsCount == 0)
+            {
+                return;
+            }
+
+            int currentPointerIndex = _nodes[nodeIndex].firstChildIndex;
+            ObjectPointer currentPointer = _objectPointers[currentPointerIndex];
+            
+            objectAction?.Invoke(currentPointer.objectIndex);
+
+            while (currentPointer.nextObjectPointerIndex != NULL)
+            {
+                currentPointerIndex = currentPointer.nextObjectPointerIndex;
+                currentPointer = _objectPointers[currentPointerIndex];
+                
+                objectAction?.Invoke(currentPointer.objectIndex);
+            }
         }
 
         private bool IsObjectMissing(int objectIndex)
@@ -430,7 +488,7 @@ namespace SpatialPartitionSystem.Core.Series
             }, out int newObjectPointerIndex);
 
             LinkObjectPointerTo(leafIndex, newObjectPointerIndex);
-
+            
             return newObjectIndex;
         }
         
@@ -470,14 +528,14 @@ namespace SpatialPartitionSystem.Core.Series
                 return allLeaves;
             }
 
-            Traverse(childIndex =>
+            Traverse(nodeIndex =>
             {
-                if (_nodes[childIndex].isLeaf == false)
+                if (_nodes[nodeIndex].isLeaf == false)
                 {
                     return;
                 }
 
-                allLeaves[leafIndex++] = childIndex;
+                allLeaves[leafIndex++] = nodeIndex;
             });
             
             return allLeaves;
