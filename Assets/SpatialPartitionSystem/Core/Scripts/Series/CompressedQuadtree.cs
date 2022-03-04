@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using Codice.CM.Common;
 using UnityEngine;
 using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    public class Quadtree<TObject> where TObject : class
+    public class CompressedQuadtree<TObject> where TObject : class
     {
         private const sbyte NULL = -1;
         private const sbyte MAX_POSSIBLE_DEPTH = 8;
@@ -30,7 +31,7 @@ namespace SpatialPartitionSystem.Core.Series
             Four = 3
         }
 
-        public Quadtree(AABB2D bounds, sbyte maxLeafObjects, sbyte maxDepth, int initialObjectsCapacity)
+        public CompressedQuadtree(AABB2D bounds, sbyte maxLeafObjects, sbyte maxDepth, int initialObjectsCapacity)
         {
             _maxLeafObjects = maxLeafObjects;
             _maxDepth = (sbyte) Mathf.Clamp(maxDepth, 0, MAX_POSSIBLE_DEPTH);
@@ -74,17 +75,122 @@ namespace SpatialPartitionSystem.Core.Series
         {
             Assert.IsNotNull(obj);
             
-            int[] allLeavesIndexes = FindAllLeavesIndexes();
-            int targetLeafIndex = FindTargetLeafIndex(allLeavesIndexes, objBounds);
+            int targetNodeIndex = FindTargetNodeIndex(objBounds);
             
-            if (targetLeafIndex == NULL)
+            if (targetNodeIndex == NULL)
             {
                 objectIndex = NULL;
                 return false;
             }
 
-            objectIndex = Add(targetLeafIndex, obj, objBounds);
+            if (_nodes[targetNodeIndex].isLeaf)
+            {
+                objectIndex = Add(targetNodeIndex, obj, objBounds);
+                Compress(targetNodeIndex);
+            }
+            else
+            {
+                int decompressedTargetNodeIndex = Decompress(targetNodeIndex, objBounds);
+                objectIndex = Add(decompressedTargetNodeIndex, obj, objBounds);
+                Compress(targetNodeIndex);
+            }
+            
             return true;
+        }
+
+        // todo: refactoring
+        private void Compress(int nodeIndex)
+        {
+            Assert.IsTrue(nodeIndex >= 0 && nodeIndex < _nodes.Capacity);
+
+            if (_nodes[nodeIndex].isLeaf)
+            {
+                return;
+            }
+
+            int[] notInterestingNodeIndexes = new int[CurrentBranchCount];
+            int currentNotInterestingNodeIndex = 0;
+
+            int lastBranchIndex = nodeIndex, firstInterestingNodeIndex = nodeIndex;
+            bool isNotInterestingNode = false, isNeedCompress = false;
+
+            do
+            {
+                int firstChildIndex = _nodes[lastBranchIndex].firstChildIndex, parentBranchIndex = NULL;
+                int branchAmongChildrenCount = 0, childrenObjectCount = 0;
+
+                for (int i = 0; i < 4; i++)
+                {
+                    int childIndex = firstChildIndex + i;
+
+                    if (_nodes[childIndex].isLeaf == false)
+                    {
+                        parentBranchIndex = lastBranchIndex;
+                        lastBranchIndex = childIndex;
+                        branchAmongChildrenCount++;
+                    }
+
+                    childrenObjectCount += _nodes[childIndex].objectsCount;
+                }
+
+                isNotInterestingNode = childrenObjectCount == 0 && branchAmongChildrenCount == 1;
+                isNeedCompress |= isNotInterestingNode;
+
+                if (isNotInterestingNode)
+                {
+                    notInterestingNodeIndexes[currentNotInterestingNodeIndex++] = parentBranchIndex;
+                }
+                else
+                {
+                    firstInterestingNodeIndex = firstChildIndex;
+                }
+                
+            } while (isNotInterestingNode);
+                
+            if (isNeedCompress == false)
+            {
+                return;
+            }
+
+            while (--currentNotInterestingNodeIndex >= 0)
+            {
+                DeleteChildrenNodesFor(notInterestingNodeIndexes[currentNotInterestingNodeIndex]);
+            }
+            
+            LinkChildrenNodesTo(nodeIndex, firstInterestingNodeIndex);
+        }
+
+        // todo: refactoring
+        private int Decompress(int nodeIndex, AABB2D objBounds)
+        {
+            Assert.IsTrue(nodeIndex >= 0 && nodeIndex < _nodes.Capacity);
+
+            int lastBranchIndex = nodeIndex, targetLeafIndex = NULL;
+            Node firstChildNode = _nodes[_nodes[nodeIndex].firstChildIndex];
+            
+            do
+            {
+                int[] childrenIndexes = Split(lastBranchIndex);
+                
+                for (int i = 0; i < childrenIndexes.Length; i++)
+                {
+                    if (_nodes[childrenIndexes[i]].bounds.Contains(firstChildNode.bounds))
+                    {
+                        LinkChildrenNodesTo(childrenIndexes[i], _nodes[lastBranchIndex].firstChildIndex);
+                        LinkChildrenNodesTo(lastBranchIndex, childrenIndexes[0]);
+                        
+                        lastBranchIndex = childrenIndexes[i];
+                    }
+
+                    if (_nodes[childrenIndexes[i]].bounds.Contains(objBounds) && lastBranchIndex != childrenIndexes[i])
+                    {
+                        targetLeafIndex = childrenIndexes[i];
+                    }
+                }
+            }
+            while (_nodes[lastBranchIndex].isLeaf == false && targetLeafIndex == NULL);
+            
+            return targetLeafIndex;
         }
 
         public bool TryRemove(int objectIndex)
@@ -101,6 +207,7 @@ namespace SpatialPartitionSystem.Core.Series
             return true;
         }
 
+        // todo: refactoring
         public void CleanUp()
         {
             if (CurrentBranchCount == 0)
@@ -112,34 +219,36 @@ namespace SpatialPartitionSystem.Core.Series
             branchIndexes[0] = _rootIndex;
             
             int parentBranchIndex, childIndex, childrenObjectsCount;
-            bool isCleanUpPossible, hasBranchAmongChildren, isNeedAnotherCleanUp = true;
-            
-            while (isNeedAnotherCleanUp)
+            bool isCleanUpPossible, hasBranchAmongChildren, isNeedAnotherCleanUp;
+
+            do
             {
                 isNeedAnotherCleanUp = false;
-                
+
                 for (int traverseBranchIndex = 0, freeBranchIndex = 1; traverseBranchIndex < CurrentBranchCount; traverseBranchIndex++)
                 {
                     parentBranchIndex = branchIndexes[traverseBranchIndex];
-                
+
                     childrenObjectsCount = 0;
                     isCleanUpPossible = hasBranchAmongChildren = false;
-                    
+
                     for (int i = 0; i < 4; i++)
                     {
                         childIndex = _nodes[parentBranchIndex].firstChildIndex + i;
-                
+
                         if (_nodes[childIndex].isLeaf == false)
                         {
                             branchIndexes[freeBranchIndex++] = childIndex;
                             hasBranchAmongChildren = true;
-                            
+
                             continue;
                         }
-                        
+
                         childrenObjectsCount += _nodes[childIndex].objectsCount;
                         isCleanUpPossible = hasBranchAmongChildren == false && i == 3 && childrenObjectsCount <= _maxLeafObjects;
                     }
+
+                    Compress(parentBranchIndex);
 
                     if (isCleanUpPossible)
                     {
@@ -147,35 +256,7 @@ namespace SpatialPartitionSystem.Core.Series
                         isNeedAnotherCleanUp = true;
                     }
                 }
-            }
-        }
-
-        private void CleanUp(int parentBranchIndex, int childrenObjectsCount)
-        {
-            int firstChildIndex = _nodes[parentBranchIndex].firstChildIndex;
-            int[] childrenUnlinkedPointerIndexes = new int[childrenObjectsCount];
-            
-            for (int i = 0, j = 0; i < 4; i++)
-            {
-                int[] unlinkedPointerIndexes = UnlinkObjectPointersFrom(firstChildIndex + i);
-
-                if (unlinkedPointerIndexes == null)
-                {
-                    continue;
-                }
-
-                for (int k = 0; k < unlinkedPointerIndexes.Length; k++)
-                {
-                    childrenUnlinkedPointerIndexes[j++] = unlinkedPointerIndexes[k];
-                }
-            }
-
-            DeleteChildrenNodesFor(parentBranchIndex);
-
-            for (int i = 0; i < childrenUnlinkedPointerIndexes.Length; i++)
-            {
-                LinkObjectPointerTo(parentBranchIndex, childrenUnlinkedPointerIndexes[i]);
-            }
+            } while (isNeedAnotherCleanUp);
         }
 
         public int Update(int objectIndex, TObject updatedObj, AABB2D updatedObjBounds)
@@ -328,18 +409,7 @@ namespace SpatialPartitionSystem.Core.Series
             Assert.IsTrue(_nodes[leafIndex].isLeaf);
             Assert.IsNotNull(obj);
 
-            int[] childrenIndexes = new int[4];
-            for (int i = 0; i < 4; i++)
-            {
-                _nodes.Add(new Node
-                {
-                    firstChildIndex = NULL,
-                    objectsCount = 0,
-                    isLeaf = true,
-                    depth = (sbyte) (_nodes[leafIndex].depth + 1),
-                    bounds = GetBoundsFor(_nodes[leafIndex].bounds, (QuadrantNumber) i)
-                }, out childrenIndexes[i]);
-            }
+            int[] childrenIndexes = Split(leafIndex);
 
             int[] unlinkedPointersIndexes = UnlinkObjectPointersFrom(leafIndex);
             int unlinkedObjectIndex, targetChildIndex;
@@ -347,12 +417,12 @@ namespace SpatialPartitionSystem.Core.Series
             for (int i = 0; i < unlinkedPointersIndexes.Length; i++)
             {
                 unlinkedObjectIndex = _objectPointers[unlinkedPointersIndexes[i]].objectIndex;
-                targetChildIndex = FindTargetLeafIndex(childrenIndexes, _objects[unlinkedObjectIndex].bounds);
+                targetChildIndex = FindTargetNodeIndex(childrenIndexes, _objects[unlinkedObjectIndex].bounds);
 
                 LinkObjectPointerTo(targetChildIndex, unlinkedPointersIndexes[i]);
             }
 
-            targetChildIndex = FindTargetLeafIndex(childrenIndexes, objBounds);
+            targetChildIndex = FindTargetNodeIndex(childrenIndexes, objBounds);
             
             if (targetChildIndex == NULL)
             {
@@ -365,6 +435,54 @@ namespace SpatialPartitionSystem.Core.Series
             return objectIndex;
         }
 
+        private int[] Split(int nodeIndex)
+        {
+            Assert.IsTrue(nodeIndex >= 0 && nodeIndex < _nodes.Capacity);
+            
+            int[] childrenIndexes = new int[4];
+            for (int i = 0; i < 4; i++)
+            {
+                _nodes.Add(new Node
+                {
+                    firstChildIndex = NULL,
+                    objectsCount = 0,
+                    isLeaf = true,
+                    depth = (sbyte) (_nodes[nodeIndex].depth + 1),
+                    bounds = GetBoundsFor(_nodes[nodeIndex].bounds, (QuadrantNumber) i)
+                }, out childrenIndexes[i]);
+            }
+
+            return childrenIndexes;
+        }
+
+        private void CleanUp(int parentBranchIndex, int childrenObjectsCount)
+        {
+            int firstChildIndex = _nodes[parentBranchIndex].firstChildIndex;
+            int[] childrenUnlinkedPointerIndexes = new int[childrenObjectsCount];
+            
+            for (int i = 0, j = 0; i < 4; i++)
+            {
+                int[] unlinkedPointerIndexes = UnlinkObjectPointersFrom(firstChildIndex + i);
+
+                if (unlinkedPointerIndexes == null)
+                {
+                    continue;
+                }
+
+                for (int k = 0; k < unlinkedPointerIndexes.Length; k++)
+                {
+                    childrenUnlinkedPointerIndexes[j++] = unlinkedPointerIndexes[k];
+                }
+            }
+
+            DeleteChildrenNodesFor(parentBranchIndex);
+
+            for (int i = 0; i < childrenUnlinkedPointerIndexes.Length; i++)
+            {
+                LinkObjectPointerTo(parentBranchIndex, childrenUnlinkedPointerIndexes[i]);
+            }
+        }
+        
         private void LinkObjectPointerTo(int leafIndex, int objectPointerIndex)
         {
             Assert.IsTrue(objectPointerIndex >= 0 && objectPointerIndex < _objectPointers.Capacity);
@@ -448,7 +566,6 @@ namespace SpatialPartitionSystem.Core.Series
         {
             Assert.IsTrue(firstChildIndex >= 0 && firstChildIndex < _nodes.Capacity);
             Assert.IsTrue(leafIndex >= 0 && leafIndex < _nodes.Capacity);
-            Assert.IsTrue(_nodes[leafIndex].isLeaf);
 
             Node node = _nodes[leafIndex];
 
@@ -508,45 +625,34 @@ namespace SpatialPartitionSystem.Core.Series
             _objectPointers.RemoveAt(objectPointerIndex);
         }
 
-        private int FindTargetLeafIndex(int[] leavesIndexes, AABB2D objBounds)
+        private int FindTargetNodeIndex(int[] nodeIndexes, AABB2D objBounds)
         {
-            Assert.IsNotNull(leavesIndexes);
+            Assert.IsNotNull(nodeIndexes);
             
-            for (int i = 0; i < leavesIndexes.Length; i++)
+            for (int i = 0; i < nodeIndexes.Length; i++)
             {
-                if (_nodes[leavesIndexes[i]].bounds.Intersects(objBounds))
+                if (_nodes[nodeIndexes[i]].bounds.Intersects(objBounds))
                 {
-                    return leavesIndexes[i];
+                    return nodeIndexes[i];
                 }
             }
 
             return NULL;
         }
 
-        private int[] FindAllLeavesIndexes()
+        private int FindTargetNodeIndex(AABB2D objBounds)
         {
-            int leavesCount = _nodes.Count - CurrentBranchCount;
-
-            int[] allLeaves = new int[leavesCount];
-            int leafIndex = 0;
-
-            if (leavesCount == 1)
-            {
-                allLeaves[0] = _rootIndex;
-                return allLeaves;
-            }
+            int[] targetNodeIndex = new int[1] { NULL };
 
             Traverse(nodeIndex =>
             {
-                if (_nodes[nodeIndex].isLeaf == false)
+                if (_nodes[nodeIndex].bounds.Intersects(objBounds))
                 {
-                    return;
+                    targetNodeIndex[0] = nodeIndex;
                 }
-
-                allLeaves[leafIndex++] = nodeIndex;
             });
             
-            return allLeaves;
+            return targetNodeIndex[0];
         }
 
         private void Traverse(Action<int> eachNodeAction)
@@ -567,6 +673,8 @@ namespace SpatialPartitionSystem.Core.Series
                 parentIndex = branchesIndexes[traverseBranchIndex];
                 firstChildIndex = _nodes[parentIndex].firstChildIndex;
                 
+                eachNodeAction.Invoke(parentIndex);
+
                 for (int i = 0; i < 4; i++)
                 {
                     childIndex = firstChildIndex + i;

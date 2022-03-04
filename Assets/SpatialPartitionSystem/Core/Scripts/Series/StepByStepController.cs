@@ -19,7 +19,7 @@ namespace SpatialPartitionSystem.Core.Series
         [SerializeField] private int currentObjectIndex = 0;
 
         private readonly Dictionary<Bounds2DObject, int> objectTreeIndexes = new Dictionary<Bounds2DObject, int>(capacity: 100);
-        private Quadtree<Transform> _quadtree;
+        private CompressedQuadtree<Transform> _quadtree;
         
         private void OnDrawGizmos()
         {
@@ -33,7 +33,7 @@ namespace SpatialPartitionSystem.Core.Series
 
         private void Start()
         {
-            _quadtree = new Quadtree<Transform>(GetComponent<Bounds2DObject>().Bounds, 1, 4, 8);
+            _quadtree = new CompressedQuadtree<Transform>(GetComponent<Bounds2DObject>().Bounds, 1, 8, 8);
 
             DisabledAllObjects();
             
