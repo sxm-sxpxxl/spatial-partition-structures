@@ -186,7 +186,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!212 &218010378
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -933,7 +933,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1003859489
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1595,7 +1595,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &2039316868
 Transform:
   m_ObjectHideFlags: 0
@@ -1655,7 +1655,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3e58ce93b86f4aa1891c54d5202b5c10, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  objectsCount: 1000
+  objectsCount: 100
   creationDelay: 0
   objectPrefab: {fileID: 252592213597523492, guid: 4898c96667dceb84b9626262b83a149e, type: 3}
   objectsContainer: {fileID: 1464039750}
@@ -1700,7 +1700,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 477ab323d65449949e73be0cb07e0626, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isMotionUpdated: 1
+  isMotionUpdated: 0
   speed: 0.2
   onObjectUpdated:
     m_PersistentCalls:

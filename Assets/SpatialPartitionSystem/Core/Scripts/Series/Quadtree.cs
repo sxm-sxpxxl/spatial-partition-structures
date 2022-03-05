@@ -20,7 +20,7 @@ namespace SpatialPartitionSystem.Core.Series
         private bool[] _missingObjects;
         private readonly List<TObject> _queryObjects;
 
-        private int CurrentBranchCount => (int) (_nodes.Count / 4);
+        private int CurrentBranchCount => _nodes.Count / 4;
 
         private enum QuadrantNumber
         {
@@ -419,14 +419,14 @@ namespace SpatialPartitionSystem.Core.Series
             int[] unlinkedObjects = new int[node.objectsCount];
             int unlinkedObjectsIndex = 0;
 
-            int currentPointerIndex = node.firstChildIndex, nextObjectPointerIndex = NULL;
+            int currentPointerIndex = node.firstChildIndex;
             ObjectPointer currentPointer = _objectPointers[currentPointerIndex];
 
             unlinkedObjects[unlinkedObjectsIndex++] = currentPointerIndex;
 
             while (currentPointer.nextObjectPointerIndex != NULL)
             {
-                nextObjectPointerIndex = currentPointer.nextObjectPointerIndex;
+                int nextObjectPointerIndex = currentPointer.nextObjectPointerIndex;
 
                 currentPointer.nextObjectPointerIndex = NULL;
                 _objectPointers[currentPointerIndex] = currentPointer;

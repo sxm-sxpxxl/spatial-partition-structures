@@ -15,7 +15,7 @@ namespace SpatialPartitionSystem.Core.Series
         [Space]
         [SerializeField] private Bounds2DObject queryBoundsObj;
         
-        private Quadtree<Transform> _quadtree;
+        private CompressedQuadtree<Transform> _quadtree;
         private readonly Dictionary<Bounds2DObject, int> treeNodesMap = new Dictionary<Bounds2DObject, int>(capacity: 100);
         private IReadOnlyList<Transform> queryObjects;
         
@@ -42,7 +42,7 @@ namespace SpatialPartitionSystem.Core.Series
         
         private void Awake()
         {
-            _quadtree = new Quadtree<Transform>(GetComponent<Bounds2DObject>().Bounds, maxLeafObjects, maxDepth, 100);
+            _quadtree = new CompressedQuadtree<Transform>(GetComponent<Bounds2DObject>().Bounds, maxLeafObjects, maxDepth, 100);
         }
 
         public void AddObject(Bounds2DObject obj)
@@ -60,12 +60,12 @@ namespace SpatialPartitionSystem.Core.Series
             int newObjectIndex = _quadtree.Update(treeNodesMap[obj], obj.Transform, obj.Bounds);
             treeNodesMap[obj] = newObjectIndex;
             
-            // if (queryBoundsObj == null)
-            // {
-            //     return;
-            // }
+            if (queryBoundsObj == null)
+            {
+                return;
+            }
 
-            // queryObjects = _quadtree.Query(queryBoundsObj.Bounds);
+            queryObjects = _quadtree.Query(queryBoundsObj.Bounds);
         }
 
         public void CleanUp()
