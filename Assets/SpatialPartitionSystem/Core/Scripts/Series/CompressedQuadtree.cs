@@ -20,8 +20,17 @@ namespace SpatialPartitionSystem.Core.Series
         private bool[] _missingObjects;
         private readonly List<TObject> _queryObjects;
 
+        internal int RootIndex => _rootIndex;
+        
         private int CurrentBranchCount => _nodes.Count / 4;
 
+        internal enum ExecutionSignal
+        {
+            Continue,
+            ContinueInDepth,
+            Stop
+        }
+        
         private enum QuadrantNumber
         {
             One = 0,
@@ -33,7 +42,7 @@ namespace SpatialPartitionSystem.Core.Series
         public CompressedQuadtree(AABB2D bounds, sbyte maxLeafObjects, sbyte maxDepth, int initialObjectsCapacity)
         {
             _maxLeafObjects = maxLeafObjects;
-            _maxDepth = (sbyte) Mathf.Clamp(maxDepth, 0, MAX_POSSIBLE_DEPTH);
+            _maxDepth = (sbyte) Mathf.Min(maxDepth, MAX_POSSIBLE_DEPTH);
 
             int maxNodesCount = (int) Mathf.Pow(4, _maxDepth);
         
@@ -58,7 +67,7 @@ namespace SpatialPartitionSystem.Core.Series
             Assert.IsNotNull(relativeTransform);
             
             var drawer = isPlaymodeOnly ? (IDebugDrawer) new PlaymodeOnlyDebugDrawer() : new GizmosDebugDrawer();
-            Traverse(nodeIndex =>
+            TraverseFromRoot((nodeIndex, _) =>
             {
                 var busyColor = _nodes[nodeIndex].objectsCount == 0 ? Color.green : Color.red;
                 drawer.SetColor(busyColor);
@@ -67,6 +76,8 @@ namespace SpatialPartitionSystem.Core.Series
                 var worldSize = relativeTransform.TransformPoint(_nodes[nodeIndex].bounds.Size);
 
                 drawer.DrawWireCube(worldCenter, worldSize);
+                
+                return ExecutionSignal.Continue;
             });
         }
 
@@ -75,23 +86,30 @@ namespace SpatialPartitionSystem.Core.Series
             Assert.IsNotNull(obj);
             
             int targetNodeIndex = FindTargetNodeIndex(objBounds);
-            
-            if (targetNodeIndex == NULL)
+            return TryAdd(targetNodeIndex, obj, objBounds, out objectIndex);
+        }
+
+        internal bool TryAdd(int nodeIndex, TObject obj, AABB2D objBounds, out int objectIndex)
+        {
+            Assert.IsNotNull(obj);
+            Assert.IsTrue((nodeIndex >= 0 && nodeIndex < _nodes.Capacity) || nodeIndex == NULL);
+
+            if (nodeIndex == NULL)
             {
                 objectIndex = NULL;
                 return false;
             }
-
-            if (_nodes[targetNodeIndex].isLeaf)
+            
+            if (_nodes[nodeIndex].isLeaf)
             {
-                objectIndex = Add(targetNodeIndex, obj, objBounds);
-                Compress(targetNodeIndex);
+                objectIndex = Add(nodeIndex, obj, objBounds);
+                Compress(nodeIndex);
             }
             else
             {
-                int decompressedTargetLeafIndex = Decompress(targetNodeIndex, objBounds);
+                int decompressedTargetLeafIndex = Decompress(nodeIndex, objBounds);
                 objectIndex = Add(decompressedTargetLeafIndex, obj, objBounds);
-                Compress(targetNodeIndex);
+                Compress(nodeIndex);
             }
             
             return true;
@@ -210,11 +228,11 @@ namespace SpatialPartitionSystem.Core.Series
         {
             _queryObjects.Clear();
             
-            Traverse(nodeIndex =>
+            TraverseFromRoot((nodeIndex, _) =>
             {
                 if (_nodes[nodeIndex].isLeaf == false || queryBounds.Intersects(_nodes[nodeIndex].bounds) == false)
                 {
-                    return;
+                    return ExecutionSignal.Continue;
                 }
             
                 TraverseObjects(nodeIndex, objectIndex =>
@@ -224,9 +242,81 @@ namespace SpatialPartitionSystem.Core.Series
                         _queryObjects.Add(_objects[objectIndex].target);
                     }
                 });
+
+                return ExecutionSignal.Continue;
             });
 
             return _queryObjects;
+        }
+
+        internal void TraverseFrom(int nodeIndex, Func<int, int, ExecutionSignal> eachNodeAction)
+        {
+            Assert.IsTrue(nodeIndex >= 0 && nodeIndex < _nodes.Capacity);
+            
+            if (_nodes[nodeIndex].isLeaf)
+            {
+                eachNodeAction.Invoke(nodeIndex, NULL);
+                return;
+            }
+            
+            int[] branchesIndexes = new int[CurrentBranchCount + 1];
+            branchesIndexes[0] = nodeIndex;
+            branchesIndexes[1] = NULL;
+            
+            int parentIndex, firstChildIndex, childIndex;
+            int traverseBranchIndex = 0, freeBranchIndex = 1;
+            
+            ExecutionSignal executionSignal = eachNodeAction.Invoke(nodeIndex, NULL);
+            if (executionSignal == ExecutionSignal.Stop)
+            {
+                return;
+            }
+            
+            do
+            {
+                parentIndex = branchesIndexes[traverseBranchIndex++];
+                firstChildIndex = _nodes[parentIndex].firstChildIndex;
+                
+                for (int i = 0; i < 4; i++)
+                {
+                    childIndex = firstChildIndex + i;
+
+                    executionSignal = eachNodeAction.Invoke(childIndex, parentIndex);
+                    if (executionSignal == ExecutionSignal.Stop)
+                    {
+                        return;
+                    }
+
+                    if (_nodes[childIndex].isLeaf == false)
+                    {
+                        branchesIndexes[freeBranchIndex + 1] = NULL;
+                        branchesIndexes[freeBranchIndex++] = childIndex;
+                    }
+                    
+                    if (executionSignal == ExecutionSignal.ContinueInDepth)
+                    {
+                        for (int j = traverseBranchIndex; j < freeBranchIndex; j++)
+                        {
+                            branchesIndexes[j] = NULL;
+                        }
+
+                        freeBranchIndex = traverseBranchIndex;
+                        
+                        if (_nodes[childIndex].isLeaf == false)
+                        {
+                            branchesIndexes[freeBranchIndex++] = childIndex;
+                        }
+                        
+                        break;
+                    }
+                }
+            } while (branchesIndexes[traverseBranchIndex] != NULL);
+        }
+
+        internal Node GetNodeBy(int nodeIndex)
+        {
+            Assert.IsTrue(nodeIndex >= 0 && nodeIndex < _nodes.Capacity);
+            return _nodes[nodeIndex];
         }
 
         private void TraverseObjects(int nodeIndex, Action<int> objectAction = null)
@@ -649,51 +739,25 @@ namespace SpatialPartitionSystem.Core.Series
 
         private int FindTargetNodeIndex(AABB2D objBounds)
         {
-            int[] targetNodeIndex = { NULL };
+            int targetNodeIndex = NULL;
 
-            Traverse(nodeIndex =>
+            TraverseFromRoot((nodeIndex, _) =>
             {
                 if (_nodes[nodeIndex].bounds.Intersects(objBounds))
                 {
-                    targetNodeIndex[0] = nodeIndex;
+                    targetNodeIndex = nodeIndex;
+                    return ExecutionSignal.ContinueInDepth;
                 }
+
+                return ExecutionSignal.Continue;
             });
             
-            return targetNodeIndex[0];
+            return targetNodeIndex;
         }
-
-        private void Traverse(Action<int> eachNodeAction)
+        
+        private void TraverseFromRoot(Func<int, int, ExecutionSignal> eachNodeAction)
         {
-            if (CurrentBranchCount == 0)
-            {
-                eachNodeAction.Invoke(_rootIndex);
-                return;
-            }
-            
-            int[] branchesIndexes = new int[CurrentBranchCount];
-            branchesIndexes[0] = _rootIndex;
-            
-            int parentIndex, firstChildIndex, childIndex;
-            
-            for (int traverseBranchIndex = 0, freeBranchIndex = 1; traverseBranchIndex < CurrentBranchCount; traverseBranchIndex++)
-            {
-                parentIndex = branchesIndexes[traverseBranchIndex];
-                firstChildIndex = _nodes[parentIndex].firstChildIndex;
-                
-                eachNodeAction.Invoke(parentIndex);
-
-                for (int i = 0; i < 4; i++)
-                {
-                    childIndex = firstChildIndex + i;
-
-                    if (_nodes[childIndex].isLeaf == false)
-                    {
-                        branchesIndexes[freeBranchIndex++] = childIndex;
-                    }
-
-                    eachNodeAction.Invoke(childIndex);
-                }
-            }
+            TraverseFrom(_rootIndex, eachNodeAction);
         }
 
         private static AABB2D GetBoundsFor(AABB2D parentBounds, QuadrantNumber quadrantNumber)

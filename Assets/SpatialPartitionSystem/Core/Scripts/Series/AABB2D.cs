@@ -4,7 +4,7 @@ using UnityEngine;
 namespace SpatialPartitionSystem.Core.Series
 {
     [Serializable]
-    public struct AABB2D
+    public struct AABB2D : IEquatable<AABB2D>
     {
         [SerializeField] private Vector2 center;
         [SerializeField] private Vector2 extents;
@@ -44,6 +44,16 @@ namespace SpatialPartitionSystem.Core.Series
             return IsLessOrEqual(Mathf.Abs(center.x - other.center.x), extents.x + other.extents.x) &&
                    IsLessOrEqual(Mathf.Abs(center.y - other.center.y), extents.y + other.extents.y);
         }
+
+        public bool Equals(AABB2D other) => center.Equals(other.center) && extents.Equals(other.extents);
+        
+        public override bool Equals(object obj) => obj is AABB2D other && Equals(other);
+        
+        public override int GetHashCode() => unchecked (center.GetHashCode() * 397) ^ extents.GetHashCode();
+        
+        public static bool operator ==(AABB2D a, AABB2D b) => a.Equals(b);
+        
+        public static bool operator !=(AABB2D a, AABB2D b) => !a.Equals(b);
 
         private bool IsGreaterOrEqual(float a, float b) => a > b || Mathf.Approximately(a, b);
         

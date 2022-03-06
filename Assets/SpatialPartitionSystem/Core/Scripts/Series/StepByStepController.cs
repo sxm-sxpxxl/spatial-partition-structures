@@ -6,6 +6,8 @@ namespace SpatialPartitionSystem.Core.Series
 {
     public class StepByStepController : MonoBehaviour
     {
+        private const int MAX_TREE_LEVEL = 3;
+        
         [SerializeField] private Bounds2DObject[] objects;
         
         [Header("Options")]
@@ -17,9 +19,12 @@ namespace SpatialPartitionSystem.Core.Series
 
         [Header("Debug Info")]
         [SerializeField] private int currentObjectIndex = 0;
+        [SerializeField, Range(0, MAX_TREE_LEVEL - 1)] private int treeLevel = 0;
 
         private readonly Dictionary<Bounds2DObject, int> objectTreeIndexes = new Dictionary<Bounds2DObject, int>(capacity: 100);
-        private CompressedQuadtree<Transform> _quadtree;
+        private SkipQuadtree<Transform> _quadtree;
+
+        private int lastTreeLevel = 0;
         
         private void OnDrawGizmos()
         {
@@ -28,12 +33,21 @@ namespace SpatialPartitionSystem.Core.Series
                 return;
             }
 
-            _quadtree.DebugDraw(transform);
+            _quadtree.DebugDraw(treeLevel, transform);
+        }
+
+        private void OnValidate()
+        {
+            if (treeLevel != lastTreeLevel)
+            {
+                SetActiveObjects(_quadtree.GetObjectsByLevel(treeLevel));
+                lastTreeLevel = treeLevel;
+            }
         }
 
         private void Start()
         {
-            _quadtree = new CompressedQuadtree<Transform>(GetComponent<Bounds2DObject>().Bounds, 1, 8, 8);
+            _quadtree = new SkipQuadtree<Transform>(MAX_TREE_LEVEL, GetComponent<Bounds2DObject>().Bounds, 1, 5, 8);
 
             DisabledAllObjects();
             
@@ -84,6 +98,19 @@ namespace SpatialPartitionSystem.Core.Series
             {
                 _quadtree.CleanUp();
                 Debug.Log($"<color=yellow>Quadtree</color> was <color=green>CLEAN UP</color>!");
+            }
+        }
+
+        private void SetActiveObjects(List<Transform> activeObjects)
+        {
+            for (int i = 0; i < objects.Length; i++)
+            {
+                objects[i].gameObject.SetActive(false);
+            }
+            
+            for (int i = 0; i < activeObjects.Count; i++)
+            {
+                activeObjects[i].gameObject.SetActive(true);
             }
         }
 

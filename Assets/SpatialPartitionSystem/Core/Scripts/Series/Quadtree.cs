@@ -33,7 +33,7 @@ namespace SpatialPartitionSystem.Core.Series
         public Quadtree(AABB2D bounds, sbyte maxLeafObjects, sbyte maxDepth, int initialObjectsCapacity)
         {
             _maxLeafObjects = maxLeafObjects;
-            _maxDepth = (sbyte) Mathf.Clamp(maxDepth, 0, MAX_POSSIBLE_DEPTH);
+            _maxDepth = (sbyte) Mathf.Min(maxDepth, MAX_POSSIBLE_DEPTH);
 
             int maxNodesCount = (int) Mathf.Pow(4, _maxDepth);
         

@@ -186,7 +186,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!212 &218010378
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -268,7 +268,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &265401184
 Transform:
   m_ObjectHideFlags: 0
@@ -933,7 +933,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1003859489
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -963,6 +963,7 @@ MonoBehaviour:
   cleanUpKey: 99
   objectForRemove: {fileID: 0}
   currentObjectIndex: 0
+  treeLevel: 0
 --- !u!4 &1003859490
 Transform:
   m_ObjectHideFlags: 0
@@ -1595,7 +1596,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2039316868
 Transform:
   m_ObjectHideFlags: 0
@@ -1640,7 +1641,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 087e44d1b7b541809ddb5c2882cd0e68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxLeafObjects: 16
+  maxLeafObjects: 1
   maxDepth: 4
   queryBoundsObj: {fileID: 265401185}
 --- !u!114 &2039316871
@@ -1655,7 +1656,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3e58ce93b86f4aa1891c54d5202b5c10, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  objectsCount: 100
+  objectsCount: 5
   creationDelay: 0
   objectPrefab: {fileID: 252592213597523492, guid: 4898c96667dceb84b9626262b83a149e, type: 3}
   objectsContainer: {fileID: 1464039750}
