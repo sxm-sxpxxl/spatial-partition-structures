@@ -180,6 +180,7 @@ namespace SpatialPartitionSystem.Core.Series
             } while (isNeedAnotherCleanUp);
         }
 
+        // todo: missing object registration is working?
         public int Update(int objectIndex, TObject updatedObj, AABB2D updatedObjBounds)
         {
             Assert.IsTrue(objectIndex >= 0 && objectIndex < _objects.Capacity);
@@ -317,6 +318,12 @@ namespace SpatialPartitionSystem.Core.Series
         {
             Assert.IsTrue(nodeIndex >= 0 && nodeIndex < _nodes.Capacity);
             return _nodes[nodeIndex];
+        }
+
+        internal TObject GetObjectBy(int objectIndex)
+        {
+            Assert.IsTrue(objectIndex >= 0 && objectIndex < _objects.Capacity);
+            return _objects[objectIndex].target;
         }
 
         private void TraverseObjects(int nodeIndex, Action<int> objectAction = null)

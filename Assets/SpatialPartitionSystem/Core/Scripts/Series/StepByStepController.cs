@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace SpatialPartitionSystem.Core.Series
 {
@@ -20,9 +21,13 @@ namespace SpatialPartitionSystem.Core.Series
         [Header("Debug Info")]
         [SerializeField] private int currentObjectIndex = 0;
         [SerializeField, Range(0, MAX_TREE_LEVEL - 1)] private int treeLevel = 0;
+        
+        [Space]
+        [SerializeField] UnityEvent<Bounds2DObject> onObjectCreated = new UnityEvent<Bounds2DObject>();
 
+        private readonly Dictionary<Bounds2DObject, int> treeNodesMap = new Dictionary<Bounds2DObject, int>(capacity: 100);
         private readonly Dictionary<Bounds2DObject, int> objectTreeIndexes = new Dictionary<Bounds2DObject, int>(capacity: 100);
-        private SkipQuadtree<Transform> _quadtree;
+        private CompressedQuadtree<Transform> _quadtree;
 
         private int lastTreeLevel = 0;
         
@@ -33,21 +38,22 @@ namespace SpatialPartitionSystem.Core.Series
                 return;
             }
 
-            _quadtree.DebugDraw(treeLevel, transform);
+            // _quadtree.DebugDraw(treeLevel, transform);
+            _quadtree.DebugDraw(transform);
         }
 
         private void OnValidate()
         {
             if (treeLevel != lastTreeLevel)
             {
-                SetActiveObjects(_quadtree.GetObjectsByLevel(treeLevel));
+                // SetActiveObjects(_quadtree.GetObjectsByLevel(treeLevel));
                 lastTreeLevel = treeLevel;
             }
         }
 
         private void Start()
         {
-            _quadtree = new SkipQuadtree<Transform>(MAX_TREE_LEVEL, GetComponent<Bounds2DObject>().Bounds, 1, 5, 8);
+            _quadtree = new CompressedQuadtree<Transform>(GetComponent<Bounds2DObject>().Bounds, 1, 5, 8);
 
             DisabledAllObjects();
             
@@ -101,7 +107,18 @@ namespace SpatialPartitionSystem.Core.Series
             }
         }
 
-        private void SetActiveObjects(List<Transform> activeObjects)
+        public void UpdateObject(Bounds2DObject obj)
+        {
+            int newObjectIndex = _quadtree.Update(treeNodesMap[obj], obj.Transform, obj.Bounds);
+            treeNodesMap[obj] = newObjectIndex;
+        }
+
+        public void CleanUp()
+        {
+            _quadtree.CleanUp();
+        }
+
+        private void SetActiveObjects(IReadOnlyList<Transform> activeObjects)
         {
             for (int i = 0; i < objects.Length; i++)
             {
@@ -121,6 +138,10 @@ namespace SpatialPartitionSystem.Core.Series
             currentObjectIndex++;
             
             obj.gameObject.SetActive(true);
+
+            treeNodesMap.Add(obj, objectIndex);
+            onObjectCreated.Invoke(obj);
+            
             Debug.Log($"Object <color=yellow>\'{obj.name}\'</color> was <color=green>ADDED</color> to quadtree!");
         }
 

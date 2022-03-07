@@ -12,7 +12,7 @@ namespace SpatialPartitionSystem.Core.Series
         
         private readonly CompressedQuadtree<TObject>[] _levelTrees;
         private readonly Dictionary<int, NodeCopyPointer>[] _nodeCopyPointersByLevel;
-        private readonly List<TObject>[] _levelTreesObjects;
+        private readonly Dictionary<int, int[]> _levelTreesObjectIndexes;
 
         private int LastLevelTreeIndex => _levelTrees.Length - 1;
         private static bool IsSkippedObject => Random.Range(0f, 1f) > 0.5f;
@@ -33,12 +33,11 @@ namespace SpatialPartitionSystem.Core.Series
         {
             _levelTrees = new CompressedQuadtree<TObject>[Mathf.Min(levelsQuantity, MAX_POSSIBLE_LEVELS_QUANTITY)];
             _nodeCopyPointersByLevel = new Dictionary<int, NodeCopyPointer>[_levelTrees.Length];
-            _levelTreesObjects = new List<TObject>[_levelTrees.Length];
+            _levelTreesObjectIndexes = new Dictionary<int, int[]>(initialObjectsCapacity);
             
             for (int i = 0; i < _levelTrees.Length; i++)
             {
                 _levelTrees[i] = new CompressedQuadtree<TObject>(bounds, maxLeafObjects, maxDepth, initialObjectsCapacity);
-                _levelTreesObjects[i] = new List<TObject>(capacity: 10);
             }
             
             for (int i = 0; i < _levelTrees.Length; i++)
@@ -61,9 +60,23 @@ namespace SpatialPartitionSystem.Core.Series
             _levelTrees[treeLevel].DebugDraw(relativeTransform, isPlaymodeOnly);
         }
 
-        public List<TObject> GetObjectsByLevel(int treeLevel)
+        public IReadOnlyList<TObject> GetObjectsByLevel(int treeLevel)
         {
-            return _levelTreesObjects[treeLevel];
+            Assert.IsTrue(treeLevel >= 0 && treeLevel < _levelTrees.Length);
+
+            var objectsByLevel = new List<TObject>(capacity: 10);
+            
+            foreach (var indexesByLevel in _levelTreesObjectIndexes.Values)
+            {
+                if (indexesByLevel[treeLevel] == NULL)
+                {
+                    continue;
+                }
+                
+                objectsByLevel.Add(_levelTrees[treeLevel].GetObjectBy(indexesByLevel[treeLevel]));
+            }
+            
+            return objectsByLevel;
         }
 
         public bool TryAdd(TObject obj, AABB2D objBounds, out int objectIndex)
@@ -73,16 +86,17 @@ namespace SpatialPartitionSystem.Core.Series
             int[] targetNodeIndexes = FindTargetNodeIndexes(objBounds);
             bool isObjAdded = _levelTrees[0].TryAdd(targetNodeIndexes[0], obj, objBounds, out objectIndex);
             
-            _levelTreesObjects[0].Add(obj);
+            _levelTreesObjectIndexes.Add(objectIndex, CreateEmptyIndexesArrayByLevel(_levelTrees.Length));
+            _levelTreesObjectIndexes[objectIndex][0] = objectIndex;
 
             for (int i = 1; i < _levelTrees.Length; i++)
             {
-                if (IsSkippedObject || _levelTrees[i].TryAdd(targetNodeIndexes[i], obj, objBounds, out _) == false)
+                if (IsSkippedObject || _levelTrees[i].TryAdd(targetNodeIndexes[i], obj, objBounds, out int objectIndexForCurrentLevel) == false)
                 {
                     break;
                 }
 
-                _levelTreesObjects[i].Add(obj);
+                _levelTreesObjectIndexes[objectIndex][i] = objectIndexForCurrentLevel;
 
                 Node prevLevelTreeNode = _levelTrees[i - 1].GetNodeBy(targetNodeIndexes[i - 1]);
                 Node currentLevelTreeNode = _levelTrees[i].GetNodeBy(targetNodeIndexes[i]);
@@ -107,12 +121,62 @@ namespace SpatialPartitionSystem.Core.Series
 
         public bool TryRemove(int objectIndex)
         {
-            return true;
+            Assert.IsTrue(_levelTreesObjectIndexes.ContainsKey(objectIndex));
+
+            bool isObjectRemoved = true;
+            int[] objectIndexesByLevel = _levelTreesObjectIndexes[objectIndex];
+            
+            for (int i = 0; i < objectIndexesByLevel.Length; i++)
+            {
+                if (objectIndexesByLevel[i] == NULL)
+                {
+                    break;
+                }
+
+                isObjectRemoved &= _levelTrees[i].TryRemove(objectIndexesByLevel[i]);
+            }
+            
+            if (isObjectRemoved)
+            {
+                _levelTreesObjectIndexes.Remove(objectIndex);
+            }
+            
+            return isObjectRemoved;
         }
 
         public void CleanUp()
         {
+            for (int i = 0; i < _levelTrees.Length; i++)
+            {
+                _levelTrees[i].CleanUp();
+            }
+        }
 
+        public int Update(int objectIndex, TObject updatedObj, AABB2D updatedObjBounds)
+        {
+            Assert.IsTrue(_levelTreesObjectIndexes.ContainsKey(objectIndex));
+            Assert.IsNotNull(updatedObj);
+
+            int actualObjectIndex = _levelTrees[0].Update(objectIndex, updatedObj, updatedObjBounds);
+            if (actualObjectIndex != objectIndex)
+            {
+                int[] tempObjectIndexesForLevels = _levelTreesObjectIndexes[objectIndex];
+                _levelTreesObjectIndexes.Remove(objectIndex);
+                _levelTreesObjectIndexes.Add(actualObjectIndex, tempObjectIndexesForLevels);
+            }
+            
+            for (int i = 1; i < _levelTrees.Length; i++)
+            {
+                if (_levelTreesObjectIndexes[actualObjectIndex][i] == NULL)
+                {
+                    break;
+                }
+                
+                int updatedObjectIndexForCurrentLevel = _levelTrees[i].Update(_levelTreesObjectIndexes[actualObjectIndex][i], updatedObj, updatedObjBounds);
+                _levelTreesObjectIndexes[actualObjectIndex][i] = updatedObjectIndexForCurrentLevel;
+            }
+
+            return actualObjectIndex;
         }
 
         private int[] FindTargetNodeIndexes(AABB2D objBounds)
@@ -120,7 +184,7 @@ namespace SpatialPartitionSystem.Core.Series
             CompressedQuadtree<TObject> currentLevelTree;
             Dictionary<int, NodeCopyPointer> currentNodeCopyPointers;
 
-            int[] targetNodeIndexes = new int[_levelTrees.Length];
+            int[] targetNodeIndexes = CreateEmptyIndexesArrayByLevel(_levelTrees.Length);
             int nextLevelTreeNodeIndex = _levelTrees[LastLevelTreeIndex].RootIndex;
 
             for (int i = LastLevelTreeIndex; i >= 0; i--)
@@ -203,6 +267,18 @@ namespace SpatialPartitionSystem.Core.Series
                     nextLevelCopyIndex = nodeCopyProperty == NodeCopyPointer.Properties.NextLevelCopyIndex ? value : NULL
                 });
             }
+        }
+
+        private int[] CreateEmptyIndexesArrayByLevel(int capacity)
+        {
+            int[] emptyIndexes = new int[capacity];
+
+            for (int i = 0; i < emptyIndexes.Length; i++)
+            {
+                emptyIndexes[i] = NULL;
+            }
+
+            return emptyIndexes;
         }
     }
 }

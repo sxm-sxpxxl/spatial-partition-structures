@@ -13,7 +13,7 @@ namespace SpatialPartitionSystem.Core.Series
         [Tooltip("Do you need to update the motion of the objects?")]
         [SerializeField] private bool isMotionUpdated = false;
         [Tooltip("The speed of the object motion (unit per second).")]
-        [SerializeField, Range(0.1f, 10f)] private float speed = 1f;
+        [SerializeField, Range(0.1f, 2f)] private float speed = 1f;
 
         [Space]
         [SerializeField] private UnityEvent<Bounds2DObject> onObjectUpdated = new UnityEvent<Bounds2DObject>();
