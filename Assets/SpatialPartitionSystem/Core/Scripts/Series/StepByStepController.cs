@@ -27,7 +27,7 @@ namespace SpatialPartitionSystem.Core.Series
 
         private readonly Dictionary<Bounds2DObject, int> treeNodesMap = new Dictionary<Bounds2DObject, int>(capacity: 100);
         private readonly Dictionary<Bounds2DObject, int> objectTreeIndexes = new Dictionary<Bounds2DObject, int>(capacity: 100);
-        private CompressedQuadtree<Transform> _quadtree;
+        private SkipQuadtree<Transform> _quadtree;
 
         private int lastTreeLevel = 0;
         
@@ -38,22 +38,22 @@ namespace SpatialPartitionSystem.Core.Series
                 return;
             }
 
-            // _quadtree.DebugDraw(treeLevel, transform);
-            _quadtree.DebugDraw(transform);
+            _quadtree.DebugDraw(treeLevel, transform);
+            // _quadtree.DebugDraw(transform);
         }
 
         private void OnValidate()
         {
             if (treeLevel != lastTreeLevel)
             {
-                // SetActiveObjects(_quadtree.GetObjectsByLevel(treeLevel));
+                SetActiveObjects(_quadtree.GetObjectsByLevel(treeLevel));
                 lastTreeLevel = treeLevel;
             }
         }
 
         private void Start()
         {
-            _quadtree = new CompressedQuadtree<Transform>(GetComponent<Bounds2DObject>().Bounds, 1, 5, 8);
+            _quadtree = new SkipQuadtree<Transform>(3, GetComponent<Bounds2DObject>().Bounds, 1, 5, 8);
 
             DisabledAllObjects();
             

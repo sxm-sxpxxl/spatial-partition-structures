@@ -152,6 +152,7 @@ namespace SpatialPartitionSystem.Core.Series
             }
         }
 
+        // todo: fixme
         public int Update(int objectIndex, TObject updatedObj, AABB2D updatedObjBounds)
         {
             Assert.IsTrue(_levelTreesObjectIndexes.ContainsKey(objectIndex));
@@ -192,16 +193,16 @@ namespace SpatialPartitionSystem.Core.Series
                 currentLevelTree = _levelTrees[i];
                 currentNodeCopyPointers = _nodeCopyPointersByLevel[i];
 
-                currentLevelTree.TraverseFrom(nextLevelTreeNodeIndex, (nodeIndex, parentIndex) =>
+                currentLevelTree.TraverseFrom(nextLevelTreeNodeIndex, data =>
                 {
-                    Node node = currentLevelTree.GetNodeBy(nodeIndex);
+                    Node node = currentLevelTree.GetNodeBy(data.nodeIndex);
                 
                     if (node.bounds.Intersects(objBounds))
                     {
-                        targetNodeIndexes[i] = nodeIndex;
+                        targetNodeIndexes[i] = data.nodeIndex;
                         int actualNodeIndex = node.isLeaf
-                            ? parentIndex == NULL ? currentLevelTree.RootIndex : parentIndex
-                            : nodeIndex;
+                            ? data.parentIndex == NULL ? currentLevelTree.RootIndex : data.parentIndex
+                            : data.nodeIndex;
 
                         if (currentNodeCopyPointers.TryGetValue(actualNodeIndex, out NodeCopyPointer foundNodeCopyPointer))
                         {

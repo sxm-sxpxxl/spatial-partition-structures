@@ -958,7 +958,7 @@ MonoBehaviour:
   - {fileID: 1855141716}
   - {fileID: 1022780155}
   - {fileID: 638337381}
-  stepByStepMode: 1
+  stepByStepMode: 0
   addObjectKey: 97
   removeObjectKey: 100
   cleanUpKey: 99
