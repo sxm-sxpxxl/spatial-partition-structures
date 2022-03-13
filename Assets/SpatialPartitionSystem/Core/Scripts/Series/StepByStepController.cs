@@ -53,7 +53,7 @@ namespace SpatialPartitionSystem.Core.Series
 
         private void Start()
         {
-            _quadtree = new SkipQuadtree<Transform>(3, GetComponent<Bounds2DObject>().Bounds, 1, 5, 8);
+            _quadtree = new SkipQuadtree<Transform>(MAX_TREE_LEVEL, GetComponent<Bounds2DObject>().Bounds, 1, 3, 8);
 
             DisabledAllObjects();
             
@@ -109,7 +109,7 @@ namespace SpatialPartitionSystem.Core.Series
 
         public void UpdateObject(Bounds2DObject obj)
         {
-            int newObjectIndex = _quadtree.Update(treeNodesMap[obj], obj.Transform, obj.Bounds);
+            int newObjectIndex = _quadtree.Update(treeNodesMap[obj], obj.Bounds);
             treeNodesMap[obj] = newObjectIndex;
         }
 

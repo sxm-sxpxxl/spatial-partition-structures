@@ -7,15 +7,24 @@ namespace SpatialPartitionSystem.Core.Series
 {
     public class SkipQuadtree<TObject> where TObject : class
     {
-        private const sbyte NULL = -1;
-        private const sbyte MAX_POSSIBLE_LEVELS_QUANTITY = 8;
+        private const int NULL = -1, MAX_POSSIBLE_LEVELS_QUANTITY = 8;
         
         private readonly CompressedQuadtree<TObject>[] _levelTrees;
         private readonly Dictionary<int, NodeCopyPointer>[] _nodeCopyPointersByLevel;
-        private readonly Dictionary<int, int[]> _levelTreesObjectIndexes;
+        private readonly Dictionary<TObject, int[]> _levelTreesObjectIndexes;
 
-        private int LastLevelTreeIndex => _levelTrees.Length - 1;
         private static bool IsSkippedObject => Random.Range(0f, 1f) > 0.5f;
+        
+        private int LastLevelTreeIndex => _levelTrees.Length - 1;
+
+        private struct LinkData
+        {
+            public int bottomLevelTreeIndex;
+            public int topLevelTreeIndex;
+            
+            public int bottomLevelTreeNodeCopyIndex;
+            public int topLevelTreeNodeCopyIndex;
+        }
         
         private struct NodeCopyPointer
         {
@@ -29,11 +38,11 @@ namespace SpatialPartitionSystem.Core.Series
             public int prevLevelCopyIndex;
         }
         
-        public SkipQuadtree(sbyte levelsQuantity, AABB2D bounds, sbyte maxLeafObjects, sbyte maxDepth, int initialObjectsCapacity)
+        public SkipQuadtree(int levelsQuantity, AABB2D bounds, int maxLeafObjects, int maxDepth, int initialObjectsCapacity)
         {
             _levelTrees = new CompressedQuadtree<TObject>[Mathf.Min(levelsQuantity, MAX_POSSIBLE_LEVELS_QUANTITY)];
             _nodeCopyPointersByLevel = new Dictionary<int, NodeCopyPointer>[_levelTrees.Length];
-            _levelTreesObjectIndexes = new Dictionary<int, int[]>(initialObjectsCapacity);
+            _levelTreesObjectIndexes = new Dictionary<TObject, int[]>(initialObjectsCapacity);
             
             for (int i = 0; i < _levelTrees.Length; i++)
             {
@@ -83,48 +92,40 @@ namespace SpatialPartitionSystem.Core.Series
         {
             Assert.IsNotNull(obj);
             
-            int[] targetNodeIndexes = FindTargetNodeIndexes(objBounds);
-            bool isObjAdded = _levelTrees[0].TryAdd(targetNodeIndexes[0], obj, objBounds, out objectIndex);
+            int[] targetNodeIndexesByLevels = FindTargetNodeIndexesByLevels(objBounds);
             
-            _levelTreesObjectIndexes.Add(objectIndex, CreateEmptyIndexesArrayByLevel(_levelTrees.Length));
-            _levelTreesObjectIndexes[objectIndex][0] = objectIndex;
+            _levelTrees[0].AddToNodeWith(targetNodeIndexesByLevels[0], obj, objBounds, out objectIndex);
+            _levelTreesObjectIndexes.Add(obj, CreateEmptyIndexesArrayByLevel(_levelTrees.Length));
+            _levelTreesObjectIndexes[obj][0] = objectIndex;
 
+            bool isAbortAddingObjectToNextLevelTrees = false;
             for (int i = 1; i < _levelTrees.Length; i++)
             {
-                if (IsSkippedObject || _levelTrees[i].TryAdd(targetNodeIndexes[i], obj, objBounds, out int objectIndexForCurrentLevel) == false)
+                if (IsSkippedObject)
                 {
+                    isAbortAddingObjectToNextLevelTrees = true;
                     break;
                 }
 
-                _levelTreesObjectIndexes[objectIndex][i] = objectIndexForCurrentLevel;
+                _levelTrees[i].AddToNodeWith(targetNodeIndexesByLevels[i], obj, objBounds, out int objectIndexForCurrentLevel);
+                _levelTreesObjectIndexes[obj][i] = objectIndexForCurrentLevel;
+            }
 
-                Node prevLevelTreeNode = _levelTrees[i - 1].GetNodeBy(targetNodeIndexes[i - 1]);
-                Node currentLevelTreeNode = _levelTrees[i].GetNodeBy(targetNodeIndexes[i]);
-                
-                bool isPrevLevelTreeNodeBranch = prevLevelTreeNode.isLeaf == false;
-                bool isCurrentLevelTreeNodeBranch = currentLevelTreeNode.isLeaf == false;
-                bool isEqualNodes = prevLevelTreeNode.bounds == currentLevelTreeNode.bounds;
-                
-                if (isPrevLevelTreeNodeBranch && isCurrentLevelTreeNodeBranch && isEqualNodes)
-                {
-                    LinkTwoLevelTreesTogether(
-                        i - 1,
-                        i,
-                        targetNodeIndexes[i - 1],
-                        targetNodeIndexes[i]
-                    );
-                }
+            if (isAbortAddingObjectToNextLevelTrees == false)
+            {
+                UpdateLinksBetweenLevelTrees();   
             }
             
-            return isObjAdded;
+            return true;
         }
 
         public bool TryRemove(int objectIndex)
         {
-            Assert.IsTrue(_levelTreesObjectIndexes.ContainsKey(objectIndex));
-
+            Assert.IsTrue(_levelTrees[0].ContainsObjectWith(objectIndex));
+            TObject obj = _levelTrees[0].GetObjectBy(objectIndex);
+            
             bool isObjectRemoved = true;
-            int[] objectIndexesByLevel = _levelTreesObjectIndexes[objectIndex];
+            int[] objectIndexesByLevel = _levelTreesObjectIndexes[obj];
             
             for (int i = 0; i < objectIndexesByLevel.Length; i++)
             {
@@ -138,7 +139,7 @@ namespace SpatialPartitionSystem.Core.Series
             
             if (isObjectRemoved)
             {
-                _levelTreesObjectIndexes.Remove(objectIndex);
+                _levelTreesObjectIndexes.Remove(obj);
             }
             
             return isObjectRemoved;
@@ -152,42 +153,36 @@ namespace SpatialPartitionSystem.Core.Series
             }
         }
 
-        // todo: fixme
-        public int Update(int objectIndex, TObject updatedObj, AABB2D updatedObjBounds)
+        public int Update(int objectIndex, AABB2D updatedObjBounds)
         {
-            Assert.IsTrue(_levelTreesObjectIndexes.ContainsKey(objectIndex));
-            Assert.IsNotNull(updatedObj);
-
-            int actualObjectIndex = _levelTrees[0].Update(objectIndex, updatedObj, updatedObjBounds);
-            if (actualObjectIndex != objectIndex)
-            {
-                int[] tempObjectIndexesForLevels = _levelTreesObjectIndexes[objectIndex];
-                _levelTreesObjectIndexes.Remove(objectIndex);
-                _levelTreesObjectIndexes.Add(actualObjectIndex, tempObjectIndexesForLevels);
-            }
+            Assert.IsTrue(_levelTrees[0].ContainsObjectWith(objectIndex));
+            TObject obj = _levelTrees[0].GetObjectBy(objectIndex);
+            
+            int actualObjectIndex = _levelTrees[0].Update(objectIndex, updatedObjBounds);
+            _levelTreesObjectIndexes[obj][0] = actualObjectIndex;
             
             for (int i = 1; i < _levelTrees.Length; i++)
             {
-                if (_levelTreesObjectIndexes[actualObjectIndex][i] == NULL)
+                if (_levelTreesObjectIndexes[obj][i] == NULL)
                 {
                     break;
                 }
                 
-                int updatedObjectIndexForCurrentLevel = _levelTrees[i].Update(_levelTreesObjectIndexes[actualObjectIndex][i], updatedObj, updatedObjBounds);
-                _levelTreesObjectIndexes[actualObjectIndex][i] = updatedObjectIndexForCurrentLevel;
+                int updatedObjectIndexForCurrentLevel = _levelTrees[i].Update(_levelTreesObjectIndexes[obj][i], updatedObjBounds);
+                _levelTreesObjectIndexes[obj][i] = updatedObjectIndexForCurrentLevel;
             }
 
             return actualObjectIndex;
         }
 
-        private int[] FindTargetNodeIndexes(AABB2D objBounds)
+        private int[] FindTargetNodeIndexesByLevels(AABB2D objBounds)
         {
             CompressedQuadtree<TObject> currentLevelTree;
             Dictionary<int, NodeCopyPointer> currentNodeCopyPointers;
 
-            int[] targetNodeIndexes = CreateEmptyIndexesArrayByLevel(_levelTrees.Length);
+            int[] targetNodeIndexesByLevels = CreateEmptyIndexesArrayByLevel(_levelTrees.Length);
             int nextLevelTreeNodeIndex = _levelTrees[LastLevelTreeIndex].RootIndex;
-
+            
             for (int i = LastLevelTreeIndex; i >= 0; i--)
             {
                 currentLevelTree = _levelTrees[i];
@@ -199,16 +194,21 @@ namespace SpatialPartitionSystem.Core.Series
                 
                     if (node.bounds.Intersects(objBounds))
                     {
-                        targetNodeIndexes[i] = data.nodeIndex;
-                        int actualNodeIndex = node.isLeaf
-                            ? data.parentIndex == NULL ? currentLevelTree.RootIndex : data.parentIndex
-                            : data.nodeIndex;
+                        targetNodeIndexesByLevels[i] = data.nodeIndex;
 
+                        if (i == 0 || data.parentIndex == NULL)
+                        {
+                            return CompressedQuadtree<TObject>.ExecutionSignal.ContinueInDepth;
+                        }
+                        
+                        int actualNodeIndex = node.isLeaf ? data.parentIndex : data.nodeIndex;
+                        
                         if (currentNodeCopyPointers.TryGetValue(actualNodeIndex, out NodeCopyPointer foundNodeCopyPointer))
                         {
+                            Assert.IsFalse(foundNodeCopyPointer.prevLevelCopyIndex == NULL);
                             nextLevelTreeNodeIndex = foundNodeCopyPointer.prevLevelCopyIndex;
                         }
-
+                        
                         return CompressedQuadtree<TObject>.ExecutionSignal.ContinueInDepth;
                     }
 
@@ -216,27 +216,135 @@ namespace SpatialPartitionSystem.Core.Series
                 });
             }
 
-            return targetNodeIndexes;
+            return targetNodeIndexesByLevels;
         }
 
-        private void LinkTwoLevelTreesTogether(int bottomLevelTreeIndex, int topLevelTreeIndex, int bottomLevelNodeCopyIndex, int topLevelNodeCopyIndex)
+        private void UpdateLinksBetweenLevelTrees()
         {
-            Assert.IsTrue(bottomLevelTreeIndex >= 0 && bottomLevelTreeIndex < _levelTrees.Length);
-            Assert.IsTrue(topLevelTreeIndex >= 0 && topLevelTreeIndex < _levelTrees.Length);
+            CompressedQuadtree<TObject> currentLevelTree;
+            Dictionary<int, NodeCopyPointer> currentNodeCopyPointers;
 
-            SetNodeCopyPropertyValueTo(
-                bottomLevelTreeIndex,
-                bottomLevelNodeCopyIndex,
-                NodeCopyPointer.Properties.NextLevelCopyIndex,
-                topLevelNodeCopyIndex
-            );
+            int nextLevelTreeNodeIndex = _levelTrees[LastLevelTreeIndex].RootIndex;
             
-            SetNodeCopyPropertyValueTo(
-                topLevelTreeIndex,
-                topLevelNodeCopyIndex,
-                NodeCopyPointer.Properties.PrevLevelCopyIndex,
-                bottomLevelNodeCopyIndex
-            );
+            for (int i = LastLevelTreeIndex; i > 0; i--)
+            {
+                currentLevelTree = _levelTrees[i];
+                currentNodeCopyPointers = _nodeCopyPointersByLevel[i];
+
+                currentLevelTree.TraverseFrom(nextLevelTreeNodeIndex, data =>
+                {
+                    Node node = currentLevelTree.GetNodeBy(data.nodeIndex);
+
+                    if (node.isLeaf || data.parentIndex == NULL || FindNodeCopyIndex(data.nodeIndex, data.parentIndex, i, i - 1, out int foundNodeCopyIndex) == false)
+                    {
+                        return CompressedQuadtree<TObject>.ExecutionSignal.Continue;
+                    }
+
+                    int actualNodeIndex = TryLinkTwoLevelTreesTogether(new LinkData
+                    {
+                        bottomLevelTreeIndex = i - 1,
+                        topLevelTreeIndex = i,
+                        bottomLevelTreeNodeCopyIndex = foundNodeCopyIndex,
+                        topLevelTreeNodeCopyIndex = data.nodeIndex
+                    }) ? data.nodeIndex : data.parentIndex;
+
+                    Assert.IsFalse(currentNodeCopyPointers[actualNodeIndex].prevLevelCopyIndex == NULL);
+                    nextLevelTreeNodeIndex = currentNodeCopyPointers[actualNodeIndex].prevLevelCopyIndex;
+                    
+                    return CompressedQuadtree<TObject>.ExecutionSignal.Continue;
+                });
+            }
+        }
+
+        private bool FindNodeCopyIndex(int nodeIndex, int parentIndex, int currentLevelTreeIndex, int requiredLevelTreeIndex, out int foundNodeCopyIndex)
+        {
+            Assert.IsTrue(currentLevelTreeIndex >= 0 && currentLevelTreeIndex < _levelTrees.Length);
+            Assert.IsTrue(requiredLevelTreeIndex >= 0 && requiredLevelTreeIndex < _levelTrees.Length);
+            Assert.IsTrue(_levelTrees[currentLevelTreeIndex].ContainsNodeWith(nodeIndex));
+            Assert.IsTrue(_levelTrees[currentLevelTreeIndex].ContainsNodeWith(parentIndex));
+
+            if (nodeIndex == parentIndex)
+            {
+                foundNodeCopyIndex = nodeIndex;
+                return true;
+            }
+            
+            bool isBackwardPass = Mathf.Sign(currentLevelTreeIndex - requiredLevelTreeIndex) > 0;
+            int currentParentIndex = parentIndex;
+
+            NodeCopyPointer nodeCopyPointer;
+            
+            for (int i = currentLevelTreeIndex; i != requiredLevelTreeIndex;)
+            {
+                if (_nodeCopyPointersByLevel[i].TryGetValue(currentParentIndex, out nodeCopyPointer) == false)
+                {
+                    foundNodeCopyIndex = NULL;
+                    return false;
+                }
+                
+                currentParentIndex = isBackwardPass ? nodeCopyPointer.prevLevelCopyIndex : nodeCopyPointer.nextLevelCopyIndex;
+                i += isBackwardPass ? -1 : 1;
+            }
+            
+            AABB2D currentNodeCopyBounds = _levelTrees[currentLevelTreeIndex].GetNodeBy(parentIndex).bounds;
+            int requiredChildCopyIndex = NULL;
+            
+            _levelTrees[requiredLevelTreeIndex].TraverseFrom(currentParentIndex, data =>
+            {
+                Node node = _levelTrees[requiredLevelTreeIndex].GetNodeBy(data.nodeIndex);
+
+                if (node.isLeaf)
+                {
+                    return CompressedQuadtree<TObject>.ExecutionSignal.Continue;
+                }
+
+                if (node.bounds == currentNodeCopyBounds)
+                {
+                    requiredChildCopyIndex = data.nodeIndex;
+                    return CompressedQuadtree<TObject>.ExecutionSignal.Stop;
+                }
+
+                return CompressedQuadtree<TObject>.ExecutionSignal.Continue;
+            });
+
+            foundNodeCopyIndex = requiredChildCopyIndex;
+            return foundNodeCopyIndex != NULL;
+        }
+
+        private bool TryLinkTwoLevelTreesTogether(LinkData linkData)
+        {
+            Assert.IsTrue(linkData.bottomLevelTreeIndex >= 0 && linkData.bottomLevelTreeIndex < _levelTrees.Length);
+            Assert.IsTrue(linkData.topLevelTreeIndex >= 0 && linkData.topLevelTreeIndex < _levelTrees.Length);
+            Assert.IsTrue(_levelTrees[linkData.bottomLevelTreeIndex].ContainsNodeWith(linkData.bottomLevelTreeNodeCopyIndex));
+            Assert.IsTrue(_levelTrees[linkData.topLevelTreeIndex].ContainsNodeWith(linkData.topLevelTreeNodeCopyIndex));
+                
+            Node bottomLevelTreeNode = _levelTrees[linkData.bottomLevelTreeIndex].GetNodeBy(linkData.bottomLevelTreeNodeCopyIndex);
+            Node topLevelTreeNode = _levelTrees[linkData.topLevelTreeIndex].GetNodeBy(linkData.topLevelTreeNodeCopyIndex);
+                
+            bool isBottomLevelTreeNodeBranch = bottomLevelTreeNode.isLeaf == false;
+            bool isTopLevelTreeNodeBranch = topLevelTreeNode.isLeaf == false;
+            bool isEqualNodes = bottomLevelTreeNode.bounds == topLevelTreeNode.bounds;
+
+            if (isBottomLevelTreeNodeBranch && isTopLevelTreeNodeBranch && isEqualNodes)
+            {
+                SetNodeCopyPropertyValueTo(
+                    linkData.bottomLevelTreeIndex,
+                    linkData.bottomLevelTreeNodeCopyIndex,
+                    NodeCopyPointer.Properties.NextLevelCopyIndex,
+                    linkData.topLevelTreeNodeCopyIndex
+                );
+            
+                SetNodeCopyPropertyValueTo(
+                    linkData.topLevelTreeIndex,
+                    linkData.topLevelTreeNodeCopyIndex,
+                    NodeCopyPointer.Properties.PrevLevelCopyIndex,
+                    linkData.bottomLevelTreeNodeCopyIndex
+                );
+                
+                return true;
+            }
+
+            return false;
         }
 
         private void SetNodeCopyPropertyValueTo(int levelTreeIndex, int nodeCopyIndex, NodeCopyPointer.Properties nodeCopyProperty, int value)
@@ -270,7 +378,7 @@ namespace SpatialPartitionSystem.Core.Series
             }
         }
 
-        private int[] CreateEmptyIndexesArrayByLevel(int capacity)
+        private static int[] CreateEmptyIndexesArrayByLevel(int capacity)
         {
             int[] emptyIndexes = new int[capacity];
 

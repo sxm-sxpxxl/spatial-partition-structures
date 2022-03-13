@@ -6,6 +6,8 @@ namespace SpatialPartitionSystem.Core.Series
     [Serializable]
     public struct AABB2D : IEquatable<AABB2D>
     {
+        private const float EPSILON = 0.001f;
+        
         [SerializeField] private Vector2 center;
         [SerializeField] private Vector2 extents;
 
@@ -45,7 +47,7 @@ namespace SpatialPartitionSystem.Core.Series
                    IsLessOrEqual(Mathf.Abs(center.y - other.center.y), extents.y + other.extents.y);
         }
 
-        public bool Equals(AABB2D other) => center.Equals(other.center) && extents.Equals(other.extents);
+        public bool Equals(AABB2D other) => IsApproximateEqual(center, other.center) && IsApproximateEqual(extents, other.extents);
         
         public override bool Equals(object obj) => obj is AABB2D other && Equals(other);
         
@@ -55,8 +57,12 @@ namespace SpatialPartitionSystem.Core.Series
         
         public static bool operator !=(AABB2D a, AABB2D b) => !a.Equals(b);
 
-        private bool IsGreaterOrEqual(float a, float b) => a > b || Mathf.Approximately(a, b);
-        
-        private bool IsLessOrEqual(float a, float b) => a < b || Mathf.Approximately(a, b);
+        private static bool IsGreaterOrEqual(float a, float b) => a > b || IsApproximateEqual(a, b);
+
+        private static bool IsLessOrEqual(float a, float b) => a < b || IsApproximateEqual(a, b);
+
+        private static bool IsApproximateEqual(float a, float b, float epsilon = EPSILON) => a == b || Mathf.Abs(a - b) < epsilon;
+
+        private static bool IsApproximateEqual(Vector2 a, Vector2 b, float epsilon = EPSILON) => IsApproximateEqual(a.x, b.x, epsilon) && IsApproximateEqual(a.y, b.y, epsilon);
     }
 }

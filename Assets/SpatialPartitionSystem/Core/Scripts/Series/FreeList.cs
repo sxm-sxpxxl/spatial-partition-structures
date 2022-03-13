@@ -19,12 +19,12 @@ namespace SpatialPartitionSystem.Core.Series
         {
             get
             {
-                Assert.IsTrue(index >= 0 && index < _items.Length);
+                Assert.IsTrue(index >= 0 && index < Capacity);
                 return _items[index];
             }
             set
             {
-                Assert.IsTrue(index >= 0 && index < _items.Length);
+                Assert.IsTrue(index >= 0 && index < Capacity);
                 _items[index] = value;
             }
         }
@@ -63,8 +63,15 @@ namespace SpatialPartitionSystem.Core.Series
 
         public void RemoveAt(int index)
         {
+            Assert.IsTrue(index >= 0 && index < Capacity);
             _freeIndexes.Enqueue(index);
             Count--;
+        }
+
+        public bool Contains(int index)
+        {
+            Assert.IsTrue(index >= 0 && index < Capacity);
+            return index < _nextItemIndex && _freeIndexes.Contains(index) == false;
         }
     }
 }

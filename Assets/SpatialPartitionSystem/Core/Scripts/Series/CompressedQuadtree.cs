@@ -7,23 +7,27 @@ namespace SpatialPartitionSystem.Core.Series
 {
     public class CompressedQuadtree<TObject> where TObject : class
     {
-        private const sbyte NULL = -1;
-        private const sbyte MAX_POSSIBLE_DEPTH = 8;
+        private const int NULL = -1, MAX_POSSIBLE_DEPTH = 8;
 
         private readonly FreeList<Node> _nodes;
         private readonly FreeList<ObjectPointer> _objectPointers;
         private readonly FreeList<NodeObject<TObject>> _objects;
 
-        private readonly sbyte _maxLeafObjects, _maxDepth;
-        private readonly int _rootIndex;
+        private readonly int _maxLeafObjects, _maxDepth, _rootIndex;
         
-        private bool[] _missingObjects;
+        private MissingObjectData[] _missingObjects;
         private readonly List<TObject> _queryObjects;
 
         internal int RootIndex => _rootIndex;
         
         private int CurrentBranchCount => _nodes.Count / 4;
 
+        private struct MissingObjectData
+        {
+            public bool isMissing;
+            public TObject obj;
+        }
+        
         private struct CompressData
         {
             public int nodeIndex;
@@ -53,13 +57,15 @@ namespace SpatialPartitionSystem.Core.Series
         {
             public int nodeIndex;
             public int parentIndex;
-            public int childOffset;
+            public bool isParentChanged;
+            public bool isLastChild;
 
-            public TraverseData(int nodeIndex, int parentIndex, int childOffset)
+            public TraverseData(int nodeIndex, int parentIndex, bool isParentChanged, bool isLastChild)
             {
                 this.nodeIndex = nodeIndex;
                 this.parentIndex = parentIndex;
-                this.childOffset = childOffset;
+                this.isParentChanged = isParentChanged;
+                this.isLastChild = isLastChild;
             }
         }
         
@@ -78,17 +84,17 @@ namespace SpatialPartitionSystem.Core.Series
             Four = 3
         }
 
-        public CompressedQuadtree(AABB2D bounds, sbyte maxLeafObjects, sbyte maxDepth, int initialObjectsCapacity)
+        public CompressedQuadtree(AABB2D bounds, int maxLeafObjects, int maxDepth, int initialObjectsCapacity)
         {
             _maxLeafObjects = maxLeafObjects;
-            _maxDepth = (sbyte) Mathf.Min(maxDepth, MAX_POSSIBLE_DEPTH);
+            _maxDepth = Mathf.Min(maxDepth, MAX_POSSIBLE_DEPTH);
 
             int maxNodesCount = (int) Mathf.Pow(4, _maxDepth);
         
             _nodes = new FreeList<Node>(maxNodesCount);
             _objectPointers = new FreeList<ObjectPointer>(initialObjectsCapacity);
             _objects = new FreeList<NodeObject<TObject>>(initialObjectsCapacity);
-            _missingObjects = new bool[initialObjectsCapacity];
+            _missingObjects = new MissingObjectData[initialObjectsCapacity];
             _queryObjects = new List<TObject>(capacity: initialObjectsCapacity);
             
             _nodes.Add(new Node
@@ -125,50 +131,46 @@ namespace SpatialPartitionSystem.Core.Series
             Assert.IsNotNull(obj);
             
             int targetNodeIndex = FindTargetNodeIndex(objBounds);
-            return TryAdd(targetNodeIndex, obj, objBounds, out objectIndex);
-        }
 
-        internal bool TryAdd(int nodeIndex, TObject obj, AABB2D objBounds, out int objectIndex)
-        {
-            Assert.IsNotNull(obj);
-            Assert.IsTrue((nodeIndex >= 0 && nodeIndex < _nodes.Capacity) || nodeIndex == NULL);
-
-            if (nodeIndex == NULL)
+            if (targetNodeIndex == NULL)
             {
                 objectIndex = NULL;
                 return false;
             }
             
+            AddToNodeWith(targetNodeIndex, obj, objBounds, out objectIndex);
+            return true;
+        }
+
+        internal void AddToNodeWith(int nodeIndex, TObject obj, AABB2D objBounds, out int objectIndex)
+        {
+            Assert.IsTrue(_nodes.Contains(nodeIndex));
+            Assert.IsNotNull(obj);
+            
             if (_nodes[nodeIndex].isLeaf)
             {
-                objectIndex = Add(nodeIndex, obj, objBounds);
+                objectIndex = AddToLeafWith(nodeIndex, obj, objBounds);
                 Compress(nodeIndex);
             }
             else
             {
                 int decompressedTargetLeafIndex = Decompress(nodeIndex, objBounds);
-                objectIndex = Add(decompressedTargetLeafIndex, obj, objBounds);
+                objectIndex = AddToLeafWith(decompressedTargetLeafIndex, obj, objBounds);
                 Compress(nodeIndex);
             }
-            
-            return true;
         }
 
         public bool TryRemove(int objectIndex)
         {
-            Assert.IsTrue(objectIndex >= 0 && objectIndex < _objects.Capacity);
+            Assert.IsTrue(_objects.Contains(objectIndex));
             
             int linkedLeafIndex = _objects[objectIndex].leafIndex;
-            if (linkedLeafIndex == NULL)
-            {
-                return false;
-            }
+            Assert.IsFalse(linkedLeafIndex == NULL);
             
             Remove(objectIndex);
             return true;
         }
 
-        // todo: refactoring?
         public void CleanUp()
         {
             if (CurrentBranchCount == 0)
@@ -188,11 +190,6 @@ namespace SpatialPartitionSystem.Core.Series
                 
                 TraverseFromRoot(data =>
                 {
-                    if (data.parentIndex == NULL)
-                    {
-                        return ExecutionSignal.Continue;
-                    }
-                    
                     if (currentParentIndex != data.parentIndex)
                     {
                         currentParentIndex = data.parentIndex;
@@ -209,32 +206,31 @@ namespace SpatialPartitionSystem.Core.Series
                         hasBranchAmongChildren = true;
                     }
 
-                    if (data.childOffset == 3 && hasBranchAmongChildren == false && childrenObjectsCount <= _maxLeafObjects)
+                    if (data.isLastChild && hasBranchAmongChildren == false && childrenObjectsCount <= _maxLeafObjects)
                     {
                         CleanUp(currentParentIndex, childrenObjectsCount);
                         isNeedAnotherCleanUp = true;
                     }
                 
                     return ExecutionSignal.Continue;
-                });
+                }, needTraverseForStartNode: false);
             } while (isNeedAnotherCleanUp);
         }
-
-        public int Update(int objectIndex, TObject updatedObj, AABB2D updatedObjBounds)
+        
+        public int Update(int objectIndex, AABB2D updatedObjBounds)
         {
-            Assert.IsTrue(objectIndex >= 0 && objectIndex < _objects.Capacity);
-            Assert.IsNotNull(updatedObj);
-
             int newObjectIndex;
             
             if (IsObjectMissing(objectIndex))
             {
-                if (TryAdd(updatedObj, updatedObjBounds, out newObjectIndex) == false)
+                if (TryAdd(_missingObjects[objectIndex].obj, updatedObjBounds, out newObjectIndex) == false)
                 {
                     return objectIndex;
                 }
                 
-                _missingObjects[objectIndex] = false;
+                _missingObjects[objectIndex].isMissing = false;
+                _missingObjects[objectIndex].obj = null;
+                
                 return newObjectIndex;
             }
             
@@ -244,20 +240,20 @@ namespace SpatialPartitionSystem.Core.Series
             if (_nodes[linkedLeafIndex].bounds.Intersects(updatedObjBounds))
             {
                 NodeObject<TObject> nodeObject = _objects[objectIndex];
-
-                nodeObject.target = updatedObj;
                 nodeObject.bounds = updatedObjBounds;
                 
                 _objects[objectIndex] = nodeObject;
-                
                 return objectIndex;
             }
-                
+
+            TObject obj = _objects[objectIndex].target;
             Remove(objectIndex);
 
-            if (TryAdd(updatedObj, updatedObjBounds, out newObjectIndex) == false)
+            if (TryAdd(obj, updatedObjBounds, out newObjectIndex) == false)
             {
-                _missingObjects[objectIndex] = true;
+                _missingObjects[objectIndex].isMissing = true;
+                _missingObjects[objectIndex].obj = obj;
+                
                 return objectIndex;
             }
 
@@ -289,43 +285,54 @@ namespace SpatialPartitionSystem.Core.Series
             return _queryObjects;
         }
 
-        internal void TraverseFrom(int nodeIndex, Func<TraverseData, ExecutionSignal> eachNodeAction)
+        internal void TraverseFrom(int nodeIndex, Func<TraverseData, ExecutionSignal> eachNodeAction, bool needTraverseForStartNode = true)
         {
             Assert.IsTrue(nodeIndex >= 0 && nodeIndex < _nodes.Capacity);
             
             if (_nodes[nodeIndex].isLeaf)
             {
-                eachNodeAction.Invoke(new TraverseData(nodeIndex, NULL, 0));
+                if (needTraverseForStartNode)
+                {
+                    eachNodeAction.Invoke(new TraverseData(nodeIndex, NULL, false, false));   
+                }
                 return;
             }
             
             int[] branchesIndexes = CreateEmptyIndexesArrayByLevel(CurrentBranchCount);
             branchesIndexes[0] = nodeIndex;
-            
-            ExecutionSignal executionSignal = eachNodeAction.Invoke(new TraverseData(nodeIndex, NULL, 0));
-            if (executionSignal == ExecutionSignal.Stop)
+
+            ExecutionSignal executionSignal;
+            if (needTraverseForStartNode)
             {
-                return;
+                executionSignal = eachNodeAction.Invoke(new TraverseData(nodeIndex, NULL, false, false));
+                if (executionSignal == ExecutionSignal.Stop)
+                {
+                    return;
+                }
             }
-            
+
             int parentIndex, firstChildIndex, childIndex;
+            bool isParentChanged;
 
             for (int traverseBranchIndex = 0, freeBranchIndex = 1;
                 traverseBranchIndex < branchesIndexes.Length && branchesIndexes[traverseBranchIndex] != NULL;
                 traverseBranchIndex++)
             {
                 parentIndex = branchesIndexes[traverseBranchIndex];
+                isParentChanged = true;
                 firstChildIndex = _nodes[parentIndex].firstChildIndex;
-                
+
                 for (int i = 0; i < 4; i++)
                 {
                     childIndex = firstChildIndex + i;
 
-                    executionSignal = eachNodeAction.Invoke(new TraverseData(childIndex, parentIndex, i));
+                    executionSignal = eachNodeAction.Invoke(new TraverseData(childIndex, parentIndex, isParentChanged, i == 3));
                     if (executionSignal == ExecutionSignal.Stop)
                     {
                         return;
                     }
+
+                    isParentChanged = false;
 
                     if (_nodes[childIndex].isLeaf == false)
                     {
@@ -364,6 +371,10 @@ namespace SpatialPartitionSystem.Core.Series
             return _objects[objectIndex].target;
         }
 
+        internal bool ContainsNodeWith(int nodeIndex) => _nodes.Contains(nodeIndex);
+
+        internal bool ContainsObjectWith(int objectIndex) => _objects.Contains(objectIndex);
+
         private void TraverseObjects(int nodeIndex, Action<int> objectAction = null)
         {
             Assert.IsTrue(nodeIndex >= 0 && nodeIndex < _nodes.Capacity);
@@ -394,15 +405,15 @@ namespace SpatialPartitionSystem.Core.Series
 
             if (objectIndex >= _missingObjects.Length)
             {
-                bool[] newArray = new bool[_objects.Capacity];
+                var newArray = new MissingObjectData[_objects.Capacity];
                 _missingObjects.CopyTo(newArray, 0);
                 _missingObjects = newArray;
             }
 
-            return _missingObjects[objectIndex];
+            return _missingObjects[objectIndex].isMissing;
         }
 
-        private int Add(int leafIndex, TObject obj, AABB2D objBounds)
+        private int AddToLeafWith(int leafIndex, TObject obj, AABB2D objBounds)
         {
             Assert.IsTrue(leafIndex >= 0 && leafIndex < _nodes.Capacity);
             Assert.IsTrue(_nodes[leafIndex].isLeaf);
@@ -467,7 +478,7 @@ namespace SpatialPartitionSystem.Core.Series
                 return NULL;
             }
             
-            int objectIndex = Add(targetChildIndex, obj, objBounds);
+            int objectIndex = AddToLeafWith(targetChildIndex, obj, objBounds);
             LinkChildrenNodesTo(leafIndex, childrenIndexes[0]);
 
             return objectIndex;
@@ -485,7 +496,7 @@ namespace SpatialPartitionSystem.Core.Series
                     firstChildIndex = NULL,
                     objectsCount = 0,
                     isLeaf = true,
-                    depth = (sbyte) (_nodes[nodeIndex].depth + 1),
+                    depth = (byte) (_nodes[nodeIndex].depth + 1),
                     bounds = GetBoundsFor(_nodes[nodeIndex].bounds, (QuadrantNumber) i)
                 }, out childrenIndexes[i]);
             }
@@ -581,7 +592,6 @@ namespace SpatialPartitionSystem.Core.Series
             LinkChildrenNodesTo(data.nodeIndex, data.firstInterestingNodeIndex);
         }
 
-        // todo: refactoring
         private CompressData GetCompressDataFor(int branchIndex)
         {
             Assert.IsTrue(branchIndex >= 0 && branchIndex < _nodes.Capacity);
@@ -590,47 +600,49 @@ namespace SpatialPartitionSystem.Core.Series
             int[] notInterestingNodeIndexes = new int[CurrentBranchCount];
             int currentNotInterestingNodeIndex = 0;
 
-            int lastBranchIndex = branchIndex, firstInterestingNodeIndex = branchIndex;
+            int firstInterestingNodeIndex = branchIndex, currentParentIndex = NULL, branchAmongChildrenCount = 0, childrenObjectCount = 0;
             bool isNotInterestingNode;
 
-            do
+            TraverseFrom(branchIndex, data =>
             {
-                int firstChildIndex = _nodes[lastBranchIndex].firstChildIndex, parentBranchIndex = NULL;
-                int branchAmongChildrenCount = 0, childrenObjectCount = 0;
-
-                for (int i = 0; i < 4; i++)
+                if (data.isParentChanged)
                 {
-                    int childIndex = firstChildIndex + i;
+                    currentParentIndex = data.parentIndex;
+                    branchAmongChildrenCount = childrenObjectCount = 0;
+                }
 
-                    if (_nodes[childIndex].isLeaf == false)
+                if (_nodes[data.nodeIndex].isLeaf == false)
+                {
+                    branchAmongChildrenCount++;
+                }
+
+                childrenObjectCount += _nodes[data.nodeIndex].objectsCount;
+
+                if (data.isLastChild)
+                {
+                    bool isNotInterestingNode = childrenObjectCount == 0 && branchAmongChildrenCount == 1;
+                    
+                    if (isNotInterestingNode)
                     {
-                        parentBranchIndex = lastBranchIndex;
-                        lastBranchIndex = childIndex;
-                        branchAmongChildrenCount++;
+                        Assert.IsTrue(currentParentIndex != NULL);
+                        notInterestingNodeIndexes[currentNotInterestingNodeIndex++] = currentParentIndex;
                     }
-
-                    childrenObjectCount += _nodes[childIndex].objectsCount;
+                    else
+                    {
+                        firstInterestingNodeIndex = _nodes[currentParentIndex].firstChildIndex;
+                        return ExecutionSignal.Stop;
+                    }
                 }
 
-                isNotInterestingNode = childrenObjectCount == 0 && branchAmongChildrenCount == 1;
-
-                if (isNotInterestingNode)
-                {
-                    Assert.IsTrue(parentBranchIndex != NULL);
-                    notInterestingNodeIndexes[currentNotInterestingNodeIndex++] = parentBranchIndex;
-                }
-                else
-                {
-                    firstInterestingNodeIndex = firstChildIndex;
-                }
-            } while (isNotInterestingNode);
-
-            int[] temp = notInterestingNodeIndexes;
+                return ExecutionSignal.Continue;
+            }, needTraverseForStartNode: false);
+            
+            int[] oversizedNotInterestingNodeIndexes = notInterestingNodeIndexes;
             notInterestingNodeIndexes = new int[currentNotInterestingNodeIndex];
 
             for (int i = 0; i < notInterestingNodeIndexes.Length; i++)
             {
-                notInterestingNodeIndexes[i] = temp[(notInterestingNodeIndexes.Length - 1) - i];
+                notInterestingNodeIndexes[i] = oversizedNotInterestingNodeIndexes[(notInterestingNodeIndexes.Length - 1) - i];
             }
             
             return new CompressData
@@ -641,19 +653,20 @@ namespace SpatialPartitionSystem.Core.Series
             };
         }
 
-        private int Decompress(int nodeIndex, AABB2D objBounds)
+        private int Decompress(int branchIndex, AABB2D objBounds)
         {
-            Assert.IsTrue(nodeIndex >= 0 && nodeIndex < _nodes.Capacity);
+            Assert.IsTrue(branchIndex >= 0 && branchIndex < _nodes.Capacity);
+            Assert.IsFalse(_nodes[branchIndex].isLeaf);
 
-            int lastBranchIndex = nodeIndex, targetLeafIndex = NULL;
-            AABB2D firstChildNodeBounds = _nodes[_nodes[nodeIndex].firstChildIndex].bounds;
+            int lastBranchIndex = branchIndex, targetLeafIndex = NULL;
+            AABB2D firstChildNodeBounds = _nodes[_nodes[branchIndex].firstChildIndex].bounds;
             bool isChildFoundForFirstChildNode, isChildFoundForTargetObject;
             
             do
             {
                 isChildFoundForFirstChildNode = isChildFoundForTargetObject = false;
                 int[] childrenIndexes = Split(lastBranchIndex);
-                
+
                 for (int i = 0; i < childrenIndexes.Length; i++)
                 {
                     if (_nodes[childrenIndexes[i]].bounds.Contains(firstChildNodeBounds))
@@ -679,7 +692,7 @@ namespace SpatialPartitionSystem.Core.Series
             }
             while (_nodes[lastBranchIndex].isLeaf == false && targetLeafIndex == NULL);
             
-            Assert.IsTrue(targetLeafIndex != NULL);
+            Assert.IsFalse(targetLeafIndex == NULL);
             return targetLeafIndex;
         }
         
@@ -858,9 +871,9 @@ namespace SpatialPartitionSystem.Core.Series
             return targetNodeIndex;
         }
         
-        private void TraverseFromRoot(Func<TraverseData, ExecutionSignal> eachNodeAction)
+        private void TraverseFromRoot(Func<TraverseData, ExecutionSignal> eachNodeAction, bool needTraverseForStartNode = true)
         {
-            TraverseFrom(_rootIndex, eachNodeAction);
+            TraverseFrom(_rootIndex, eachNodeAction, needTraverseForStartNode);
         }
 
         private static int[] CreateEmptyIndexesArrayByLevel(int capacity)

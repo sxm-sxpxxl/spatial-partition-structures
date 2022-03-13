@@ -3,10 +3,10 @@
     internal struct Node
     {
         public int firstChildIndex;
-        public ushort objectsCount;
+        public byte objectsCount;
         public bool isLeaf;
         
-        public sbyte depth;
+        public byte depth;
         public AABB2D bounds;
     }
 }

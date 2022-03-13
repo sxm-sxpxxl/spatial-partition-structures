@@ -7,15 +7,13 @@ namespace SpatialPartitionSystem.Core.Series
 {
     public class Quadtree<TObject> where TObject : class
     {
-        private const sbyte NULL = -1;
-        private const sbyte MAX_POSSIBLE_DEPTH = 8;
+        private const int NULL = -1, MAX_POSSIBLE_DEPTH = 8;
 
         private readonly FreeList<Node> _nodes;
         private readonly FreeList<ObjectPointer> _objectPointers;
         private readonly FreeList<NodeObject<TObject>> _objects;
 
-        private readonly sbyte _maxLeafObjects, _maxDepth;
-        private readonly int _rootIndex;
+        private readonly int _maxLeafObjects, _maxDepth, _rootIndex;
         
         private bool[] _missingObjects;
         private readonly List<TObject> _queryObjects;
@@ -30,10 +28,10 @@ namespace SpatialPartitionSystem.Core.Series
             Four = 3
         }
 
-        public Quadtree(AABB2D bounds, sbyte maxLeafObjects, sbyte maxDepth, int initialObjectsCapacity)
+        public Quadtree(AABB2D bounds, int maxLeafObjects, int maxDepth, int initialObjectsCapacity)
         {
             _maxLeafObjects = maxLeafObjects;
-            _maxDepth = (sbyte) Mathf.Min(maxDepth, MAX_POSSIBLE_DEPTH);
+            _maxDepth = Mathf.Min(maxDepth, MAX_POSSIBLE_DEPTH);
 
             int maxNodesCount = (int) Mathf.Pow(4, _maxDepth);
         
@@ -336,7 +334,7 @@ namespace SpatialPartitionSystem.Core.Series
                     firstChildIndex = NULL,
                     objectsCount = 0,
                     isLeaf = true,
-                    depth = (sbyte) (_nodes[leafIndex].depth + 1),
+                    depth = (byte) (_nodes[leafIndex].depth + 1),
                     bounds = GetBoundsFor(_nodes[leafIndex].bounds, (QuadrantNumber) i)
                 }, out childrenIndexes[i]);
             }
