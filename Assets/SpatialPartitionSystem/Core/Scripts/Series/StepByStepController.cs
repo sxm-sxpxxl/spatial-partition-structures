@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -10,6 +11,19 @@ namespace SpatialPartitionSystem.Core.Series
         private const int MAX_TREE_LEVEL = 3;
         
         [SerializeField] private Bounds2DObject[] objects;
+
+        [Serializable]
+        private struct LevelTreesObjects
+        {
+            public Bounds2DObject[] levelTreeObjects;
+        }
+        
+        [Space]
+        [SerializeField] private LevelTreesObjects[] objectsByLevel = new LevelTreesObjects[MAX_TREE_LEVEL];
+        [SerializeField] private bool isAddByLevels = false;
+        
+        [Space]
+        [SerializeField] private Bounds2DObject queryBoundsObj;
         
         [Header("Options")]
         [SerializeField] private bool stepByStepMode = true;
@@ -28,18 +42,35 @@ namespace SpatialPartitionSystem.Core.Series
         private readonly Dictionary<Bounds2DObject, int> treeNodesMap = new Dictionary<Bounds2DObject, int>(capacity: 100);
         private readonly Dictionary<Bounds2DObject, int> objectTreeIndexes = new Dictionary<Bounds2DObject, int>(capacity: 100);
         private SkipQuadtree<Transform> _quadtree;
+        private IReadOnlyList<Transform> queryObjects;
 
         private int lastTreeLevel = 0;
         
         private void OnDrawGizmos()
         {
-            if (_quadtree == null)
+            if (_quadtree == null || queryBoundsObj == null)
             {
                 return;
             }
 
             _quadtree.DebugDraw(treeLevel, transform);
             // _quadtree.DebugDraw(transform);
+            
+            // Gizmos.color = new Color(0f, 1f, 0f, 0.25f);
+            // Gizmos.DrawCube(queryBoundsObj.Bounds.Center, 2f * queryBoundsObj.Bounds.Extents + SkipQuadtree<Transform>.EPSILON * Vector2.one);
+            
+            queryObjects = _quadtree.ApproximateQuery(queryBoundsObj.Bounds);
+            
+            if (queryObjects == null)
+            {
+                return;
+            }
+            
+            Gizmos.color = Color.black;
+            for (int i = 0; i < queryObjects.Count; i++)
+            {
+                Gizmos.DrawSphere(queryObjects[i].position, 0.025f);
+            }
         }
 
         private void OnValidate()
@@ -53,9 +84,9 @@ namespace SpatialPartitionSystem.Core.Series
 
         private void Start()
         {
-            _quadtree = new SkipQuadtree<Transform>(MAX_TREE_LEVEL, GetComponent<Bounds2DObject>().Bounds, 1, 3, 8);
-
-            DisabledAllObjects();
+            _quadtree = new SkipQuadtree<Transform>(MAX_TREE_LEVEL, GetComponent<Bounds2DObject>().Bounds, 1, 4, 8);
+            
+            DisableAllObjects();
             
             if (stepByStepMode)
             {
@@ -145,7 +176,7 @@ namespace SpatialPartitionSystem.Core.Series
             Debug.Log($"Object <color=yellow>\'{obj.name}\'</color> was <color=green>ADDED</color> to quadtree!");
         }
 
-        private void DisabledAllObjects()
+        private void DisableAllObjects()
         {
             for (int i = 0; i < objects.Length; i++)
             {

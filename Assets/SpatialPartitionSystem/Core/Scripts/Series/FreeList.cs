@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core.Series
@@ -7,7 +6,7 @@ namespace SpatialPartitionSystem.Core.Series
     internal sealed class FreeList<T>
     {
         private T[] _items;
-        private Queue<int> _freeIndexes;
+        private readonly Queue<int> _freeIndexes;
         private int _nextItemIndex;
 
         public int Capacity => _items.Length;
@@ -70,8 +69,8 @@ namespace SpatialPartitionSystem.Core.Series
 
         public bool Contains(int index)
         {
-            Assert.IsTrue(index >= 0 && index < Capacity);
-            return index < _nextItemIndex && _freeIndexes.Contains(index) == false;
+            return index >= 0 && index < Capacity &&
+                   index < _nextItemIndex && _freeIndexes.Contains(index) == false;
         }
     }
 }

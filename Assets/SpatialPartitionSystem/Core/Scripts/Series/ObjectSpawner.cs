@@ -11,7 +11,7 @@ namespace SpatialPartitionSystem.Core.Series
     public sealed class ObjectSpawner : MonoBehaviour
     {
         [Tooltip("The number of objects created.")]
-        [SerializeField, Range(1, 3000)] private int objectsCount = 10;
+        [SerializeField, Range(1, 100000)] private int objectsCount = 10;
         [Tooltip("The delay between object creation.")]
         [SerializeField, Range(0f, 5f)] private float creationDelay = 2f;
         
@@ -28,7 +28,8 @@ namespace SpatialPartitionSystem.Core.Series
 
         private void Start()
         {
-            StartCoroutine(SpawnObjectsCoroutine());
+            SpawnObjects();
+            // StartCoroutine(SpawnObjectsCoroutine());
         }
 
         private IEnumerator SpawnObjectsCoroutine()
@@ -54,6 +55,35 @@ namespace SpatialPartitionSystem.Core.Series
                 instance.gameObject.SetActive(false);
                 
                 yield return new WaitForSeconds(creationDelay);
+                
+                _objects.Add(instance);
+                onObjectCreated.Invoke(instance);
+                
+                instance.gameObject.SetActive(true);
+            }
+        }
+
+        private void SpawnObjects()
+        {
+            Bounds2DObject rootSpatialObject = GetComponent<Bounds2DObject>();
+            
+            for (int i = 0; i < objectsCount; i++)
+            {
+                Vector3 min = rootSpatialObject.Bounds.Min;
+                Vector3 max = rootSpatialObject.Bounds.Max;
+                
+                float randomX = Random.Range(min.x, max.x);
+                float randomY = Random.Range(min.y, max.y);
+                float randomZ = Random.Range(min.z, max.z);
+
+                var instance = Instantiate(
+                    objectPrefab,
+                    transform.TransformPoint(new Vector3(randomX, randomY, randomZ)),
+                    objectPrefab.transform.rotation,
+                    objectsContainer
+                );
+                instance.name = $"{i}";
+                instance.gameObject.SetActive(false);
                 
                 _objects.Add(instance);
                 onObjectCreated.Invoke(instance);

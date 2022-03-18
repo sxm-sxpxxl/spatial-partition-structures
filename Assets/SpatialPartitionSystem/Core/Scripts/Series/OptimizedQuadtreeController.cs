@@ -1,4 +1,6 @@
-﻿using System;
+﻿#define SKIP
+
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -19,8 +21,14 @@ namespace SpatialPartitionSystem.Core.Series
 
         [Space]
         [SerializeField] private Bounds2DObject queryBoundsObj;
-        
+
+        // private Quadtree<Transform> _quadtree;
+        #if SKIP
         private SkipQuadtree<Transform> _quadtree;
+        #else
+        private CompressedQuadtree<Transform> _quadtree;
+        #endif
+
         private readonly Dictionary<Bounds2DObject, int> treeNodesMap = new Dictionary<Bounds2DObject, int>(capacity: 100);
         private IReadOnlyList<Transform> queryObjects;
 
@@ -29,14 +37,20 @@ namespace SpatialPartitionSystem.Core.Series
         
         private void OnDrawGizmos()
         {
-            if (_quadtree == null)
+            if (_quadtree == null || queryBoundsObj == null)
             {
                 return;
             }
             
+            #if SKIP
             _quadtree.DebugDraw(treeLevel, relativeTransform: transform);
-            // _quadtree.DebugDraw(relativeTransform: transform);
+            #else
+            _quadtree.DebugDraw(relativeTransform: transform);
+            #endif
 
+            // queryObjects = _quadtree.Query(queryBoundsObj.Bounds);
+            // queryObjects = _quadtree.ApproximateQuery(queryBoundsObj.Bounds);
+            
             if (queryObjects == null)
             {
                 return;
@@ -53,15 +67,30 @@ namespace SpatialPartitionSystem.Core.Series
         {
             if (treeLevel != lastTreeLevel)
             {
+                #if SKIP
                 SetActiveObjects(_quadtree.GetObjectsByLevel(treeLevel));
+                #endif
                 lastTreeLevel = treeLevel;
             }
         }
         
         private void Awake()
         {
-            _quadtree = new SkipQuadtree<Transform>(MAX_TREE_LEVEL, GetComponent<Bounds2DObject>().Bounds, maxLeafObjects, maxDepth, 100);
-            // _quadtree = new CompressedQuadtree<Transform>(GetComponent<Bounds2DObject>().Bounds, maxLeafObjects, maxDepth, 100);
+            // _quadtree = new Quadtree<Transform>(GetComponent<Bounds2DObject>().Bounds, maxLeafObjects, maxDepth, _objects.Capacity);
+            #if SKIP
+            _quadtree = new SkipQuadtree<Transform>(MAX_TREE_LEVEL, GetComponent<Bounds2DObject>().Bounds, maxLeafObjects, maxDepth, _objects.Capacity);
+            #else
+            _quadtree = new CompressedQuadtree<Transform>(GetComponent<Bounds2DObject>().Bounds, maxLeafObjects, maxDepth, _objects.Capacity);
+            #endif
+        }
+
+        private void Update()
+        {
+            #if SKIP
+            queryObjects = _quadtree.ApproximateQuery(queryBoundsObj.Bounds);
+            #else
+            queryObjects = _quadtree.Query(queryBoundsObj.Bounds);
+            #endif
         }
 
         public void AddObject(Bounds2DObject obj)
@@ -77,20 +106,22 @@ namespace SpatialPartitionSystem.Core.Series
 
         public void UpdateObject(Bounds2DObject obj)
         {
+            // int newObjectIndex = _quadtree.Update(treeNodesMap[obj], obj.Transform, obj.Bounds);
             int newObjectIndex = _quadtree.Update(treeNodesMap[obj], obj.Bounds);
             treeNodesMap[obj] = newObjectIndex;
             
-            // if (queryBoundsObj == null)
-            // {
-            //     return;
-            // }
-            //
-            // queryObjects = _quadtree.Query(queryBoundsObj.Bounds);
+            if (queryBoundsObj == null)
+            {
+                return;
+            }
+            
+            // queryObjects = _quadtree.ApproximateQuery(queryBoundsObj.Bounds);
         }
 
         public void CleanUp()
         {
             _quadtree.CleanUp();
+            // queryObjects = _quadtree.ApproximateQuery(queryBoundsObj.Bounds);
         }
 
         public void RemoveObject(Bounds2DObject obj)

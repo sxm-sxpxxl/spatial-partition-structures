@@ -2,6 +2,7 @@
 {
     internal struct Node
     {
+        public int parentIndex;
         public int firstChildIndex;
         public byte objectsCount;
         public bool isLeaf;
