@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
 
-namespace SpatialPartitionSystem.Core.Series
+namespace SpatialPartitionSystem.Core.Series.Old
 {
     public class Quadtree<TObject> where TObject : class
     {

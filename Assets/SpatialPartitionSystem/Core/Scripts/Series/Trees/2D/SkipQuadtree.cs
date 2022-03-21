@@ -2,12 +2,13 @@
 using UnityEngine;
 using UnityEngine.Assertions;
 
-namespace SpatialPartitionSystem.Core.Series
+namespace SpatialPartitionSystem.Core.Series.Trees
 {
-    public class SkipQuadtree<TObject> where TObject : class
+    public class SkipQuadtree<TObject> : ISpatialTree<TObject>, IApproximateQueryable<TObject>
+        where TObject : class
     {
         private const float DefaultExtendedEpsilon = 0.1f;
-        private const int Null = CompressedQuadtree<TObject>.Null, MaxPossibleLevelsQuantity = 8;
+        private const int Null = SpatialTree<TObject>.Null, MaxPossibleLevelsQuantity = 8;
         
         private readonly CompressedQuadtree<TObject>[] _levelTrees;
         private readonly Dictionary<int, NodeCopyPointer>[] _nodeCopyPointersByLevel;
@@ -65,7 +66,12 @@ namespace SpatialPartitionSystem.Core.Series
             InitNodeCopyPointers();
         }
 
-        public void DebugDraw(int treeLevel, Transform relativeTransform, bool isPlaymodeOnly = false)
+        public void DebugDraw(Transform relativeTransform, bool isPlaymodeOnly = false)
+        {
+            DebugDrawTreeLevel(treeLevel: 0, relativeTransform, isPlaymodeOnly);
+        }
+        
+        public void DebugDrawTreeLevel(int treeLevel, Transform relativeTransform, bool isPlaymodeOnly = false)
         {
             Assert.IsNotNull(relativeTransform);
             
@@ -190,7 +196,7 @@ namespace SpatialPartitionSystem.Core.Series
             _currentExtendedEpsilon = epsilon;
             _extendedBounds = new AABB2D(queryBounds.Center, queryBounds.Extents + _currentExtendedEpsilon * Vector2.one);
             
-            _queryCriticalChildrenIndexes.Enqueue(CompressedQuadtree<TObject>.RootIndex);
+            _queryCriticalChildrenIndexes.Enqueue(SpatialTree<TObject>.RootIndex);
 
             int nodeIndex;
             Node node;
@@ -207,7 +213,7 @@ namespace SpatialPartitionSystem.Core.Series
             
                 if (node.isLeaf)
                 {
-                    _levelTrees[0].AddIntersectedQueryBoundsLeafObjects(nodeIndex, queryBounds, _queryObjects);
+                    _levelTrees[0].AddIntersectedLeafObjects(nodeIndex, queryBounds, _queryObjects);
                     continue;
                 }
                 
@@ -366,8 +372,8 @@ namespace SpatialPartitionSystem.Core.Series
             CompressedQuadtree<TObject> currentLevelTree;
             Dictionary<int, NodeCopyPointer> currentNodeCopyPointers;
 
-            int[] targetNodeIndexesByLevels = ArrayUtility.CreateArray(capacity: _levelTrees.Length, defaultValue: CompressedQuadtree<TObject>.RootIndex);
-            int nextLevelTreeNodeIndex = CompressedQuadtree<TObject>.RootIndex;
+            int[] targetNodeIndexesByLevels = ArrayUtility.CreateArray(capacity: _levelTrees.Length, defaultValue: SpatialTree<TObject>.RootIndex);
+            int nextLevelTreeNodeIndex = SpatialTree<TObject>.RootIndex;
             
             for (int i = LastLevelTreeIndex; i >= 0; i--)
             {
@@ -382,7 +388,7 @@ namespace SpatialPartitionSystem.Core.Series
 
                         if (i == 0 || data.node.parentIndex == Null)
                         {
-                            return CompressedQuadtree<TObject>.ExecutionSignal.ContinueInDepth;
+                            return SpatialTree<TObject>.ExecutionSignal.ContinueInDepth;
                         }
                         
                         int actualNodeIndex = data.node.isLeaf ? data.node.parentIndex : data.nodeIndex;
@@ -393,7 +399,7 @@ namespace SpatialPartitionSystem.Core.Series
                             {
                                 if (FindNodeCopyIndex(actualNodeIndex, i, i - 1, out int bottomNodeCopyIndex) == false)
                                 {
-                                    return CompressedQuadtree<TObject>.ExecutionSignal.ContinueInDepth;
+                                    return SpatialTree<TObject>.ExecutionSignal.ContinueInDepth;
                                 }
                                 
                                 TryLinkTwoLevelTreesTogether(new LinkLevelTreeData
@@ -405,16 +411,16 @@ namespace SpatialPartitionSystem.Core.Series
                                 });
 
                                 nextLevelTreeNodeIndex = bottomNodeCopyIndex;
-                                return CompressedQuadtree<TObject>.ExecutionSignal.ContinueInDepth;
+                                return SpatialTree<TObject>.ExecutionSignal.ContinueInDepth;
                             }
 
                             nextLevelTreeNodeIndex = currentNodeCopyPointers[actualNodeIndex].prevLevelNodeCopyIndex;
                         }
                         
-                        return CompressedQuadtree<TObject>.ExecutionSignal.ContinueInDepth;
+                        return SpatialTree<TObject>.ExecutionSignal.ContinueInDepth;
                     }
 
-                    return CompressedQuadtree<TObject>.ExecutionSignal.Continue;
+                    return SpatialTree<TObject>.ExecutionSignal.Continue;
                 });
             }
 
@@ -427,11 +433,11 @@ namespace SpatialPartitionSystem.Core.Series
             
             for (int i = LastLevelTreeIndex; i > 0; i--)
             {
-                _levelTrees[i].TraverseFrom(CompressedQuadtree<TObject>.RootIndex, data =>
+                _levelTrees[i].TraverseFrom(SpatialTree<TObject>.RootIndex, data =>
                 {
                     if (data.node.isLeaf || data.node.parentIndex == Null || FindNodeCopyIndex(data.nodeIndex, i, i - 1, out int foundNodeCopyIndex) == false)
                     {
-                        return CompressedQuadtree<TObject>.ExecutionSignal.Continue;
+                        return SpatialTree<TObject>.ExecutionSignal.Continue;
                     }
 
                     TryLinkTwoLevelTreesTogether(new LinkLevelTreeData
@@ -442,7 +448,7 @@ namespace SpatialPartitionSystem.Core.Series
                         topNodeCopyIndex = data.nodeIndex
                     });
                     
-                    return CompressedQuadtree<TObject>.ExecutionSignal.Continue;
+                    return SpatialTree<TObject>.ExecutionSignal.Continue;
                 });
             }
         }
@@ -476,7 +482,7 @@ namespace SpatialPartitionSystem.Core.Series
             }
 
             AABB2D currentNodeCopyBounds = _levelTrees[currentLevelTreeIndex].GetNodeBy(nodeIndex).bounds;
-            currentParentIndex = currentParentIndex == Null ? CompressedQuadtree<TObject>.RootIndex : currentParentIndex;
+            currentParentIndex = currentParentIndex == Null ? SpatialTree<TObject>.RootIndex : currentParentIndex;
             
             foundNodeCopyIndex = _levelTrees[requiredLevelTreeIndex].GetEqualNodeIndexFrom(currentParentIndex, currentNodeCopyBounds);
             return foundNodeCopyIndex != Null;
@@ -554,7 +560,7 @@ namespace SpatialPartitionSystem.Core.Series
             for (int i = 0; i < _nodeCopyPointersByLevel.Length; i++)
             {
                 _nodeCopyPointersByLevel[i].Clear();
-                _nodeCopyPointersByLevel[i].Add(CompressedQuadtree<TObject>.RootIndex, GetInitialNodeCopyPointerByLevel(i));
+                _nodeCopyPointersByLevel[i].Add(SpatialTree<TObject>.RootIndex, GetInitialNodeCopyPointerByLevel(i));
             }
         }
 
@@ -564,8 +570,8 @@ namespace SpatialPartitionSystem.Core.Series
             
             return new NodeCopyPointer
             {
-                prevLevelNodeCopyIndex = treeLevel > 0 ? CompressedQuadtree<TObject>.RootIndex : Null,
-                nextLevelNodeCopyIndex = treeLevel < _levelTrees.Length - 1 ? CompressedQuadtree<TObject>.RootIndex : Null
+                prevLevelNodeCopyIndex = treeLevel > 0 ? SpatialTree<TObject>.RootIndex : Null,
+                nextLevelNodeCopyIndex = treeLevel < _levelTrees.Length - 1 ? SpatialTree<TObject>.RootIndex : Null
             };
         }
     }

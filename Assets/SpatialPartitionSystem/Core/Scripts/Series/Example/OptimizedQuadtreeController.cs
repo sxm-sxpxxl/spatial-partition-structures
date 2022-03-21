@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace SpatialPartitionSystem.Core.Series
+namespace SpatialPartitionSystem.Core.Series.Trees
 {
     [DisallowMultipleComponent, RequireComponent(typeof(Bounds2DObject))]
     public sealed class OptimizedQuadtreeController : MonoBehaviour
@@ -43,7 +43,7 @@ namespace SpatialPartitionSystem.Core.Series
             }
             
             #if SKIP
-            _quadtree.DebugDraw(treeLevel, relativeTransform: transform);
+            _quadtree.DebugDrawTreeLevel(treeLevel, relativeTransform: transform);
             #else
             _quadtree.DebugDraw(relativeTransform: transform);
             #endif

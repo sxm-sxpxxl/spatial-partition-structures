@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace SpatialPartitionSystem.Core.Series
+namespace SpatialPartitionSystem.Core.Series.Trees
 {
     public class StepByStepController : MonoBehaviour
     {
@@ -53,7 +53,7 @@ namespace SpatialPartitionSystem.Core.Series
                 return;
             }
 
-            _quadtree.DebugDraw(treeLevel, transform);
+            _quadtree.DebugDrawTreeLevel(treeLevel, transform);
             // _quadtree.DebugDraw(transform);
             
             // Gizmos.color = new Color(0f, 1f, 0f, 0.25f);
