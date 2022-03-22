@@ -3,17 +3,12 @@ using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    internal partial class SpatialTree<TObject> : ISpatialTree<TObject> where TObject : class
+    internal sealed partial class SpatialTree<TObject, TBounds, TVector> : ISpatialTree<TObject, TBounds, TVector>
+        where TObject : class
+        where TBounds : IAABB<TVector>
+        where TVector : struct
     {
-        private enum QuadrantNumber
-        {
-            One = 0,
-            Two = 1,
-            Three = 2,
-            Four = 3
-        }
-        
-        public bool TryAdd(TObject obj, AABB2D objBounds, out int objectIndex)
+        public bool TryAdd(TObject obj, TBounds objBounds, out int objectIndex)
         {
             Assert.IsNotNull(obj);
             
@@ -28,7 +23,7 @@ namespace SpatialPartitionSystem.Core.Series
             return true;
         }
         
-        public int AddObjectToLeaf(int leafIndex, TObject obj, AABB2D objBounds)
+        public int AddObjectToLeaf(int leafIndex, TObject obj, TBounds objBounds)
         {
             Assert.IsTrue(leafIndex >= 0 && leafIndex < _nodes.Capacity);
             Assert.IsTrue(_nodes[leafIndex].isLeaf);
@@ -49,14 +44,14 @@ namespace SpatialPartitionSystem.Core.Series
             Assert.IsTrue(firstChildIndex >= 0 && firstChildIndex < _nodes.Capacity);
             Assert.IsTrue(nodeIndex >= 0 && nodeIndex < _nodes.Capacity);
 
-            Node node = _nodes[nodeIndex];
+            var node = _nodes[nodeIndex];
 
             node.isLeaf = false;
             node.firstChildIndex = firstChildIndex;
 
             _nodes[nodeIndex] = node;
             
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < _maxChildrenCount; i++)
             {
                 node = _nodes[firstChildIndex + i];
                 node.parentIndex = nodeIndex;
@@ -68,30 +63,50 @@ namespace SpatialPartitionSystem.Core.Series
         {
             Assert.IsTrue(nodeIndex >= 0 && nodeIndex < _nodes.Capacity);
             
-            int[] childrenIndexes = new int[4];
-            for (int i = 0; i < 4; i++)
+            int[] childrenIndexes = new int[_maxChildrenCount];
+            TBounds parentBounds = _nodes[nodeIndex].bounds;
+            
+            for (int i = 0; i < _maxChildrenCount; i++)
             {
-                _nodes.Add(new Node
+                _nodes.Add(new Node<TBounds, TVector>
                 {
                     parentIndex = Null,
                     firstChildIndex = Null,
                     objectsCount = 0,
                     isLeaf = true,
                     depth = (byte) (_nodes[nodeIndex].depth + 1),
-                    bounds = GetBoundsFor(_nodes[nodeIndex].bounds, (QuadrantNumber) i)
+                    bounds = (TBounds) parentBounds.GetChildBoundsBy((SplitSection) i)
                 }, out childrenIndexes[i]);
             }
 
             return childrenIndexes;
         }
+
+        internal int FindTargetNodeIndex(TBounds objBounds)
+        {
+            int targetNodeIndex = Null;
+
+            TraverseFromRoot(data =>
+            {
+                if (_nodes[data.nodeIndex].bounds.Intersects(objBounds))
+                {
+                    targetNodeIndex = data.nodeIndex;
+                    return ExecutionSignal.ContinueInDepth;
+                }
+
+                return ExecutionSignal.Continue;
+            });
+            
+            return targetNodeIndex;
+        }
         
-        private int CreateObjectFor(int leafIndex, TObject obj, AABB2D objBounds)
+        private int CreateObjectFor(int leafIndex, TObject obj, TBounds objBounds)
         {
             Assert.IsTrue(leafIndex >= 0 && leafIndex < _nodes.Capacity);
             Assert.IsTrue(_nodes[leafIndex].isLeaf);
             Assert.IsNotNull(obj);
             
-            _objects.Add(new NodeObject<TObject>
+            _objects.Add(new NodeObject<TObject, TBounds, TVector>
             {
                 leafIndex = leafIndex,
                 target = obj,
@@ -109,7 +124,7 @@ namespace SpatialPartitionSystem.Core.Series
             return newObjectIndex;
         }
         
-        private int Split(int leafIndex, TObject obj, AABB2D objBounds)
+        private int Split(int leafIndex, TObject obj, TBounds objBounds)
         {
             Assert.IsTrue(leafIndex >= 0 && leafIndex < _nodes.Capacity);
             Assert.IsTrue(_nodes[leafIndex].isLeaf);
@@ -125,6 +140,11 @@ namespace SpatialPartitionSystem.Core.Series
                 unlinkedObjectIndex = _objectPointers[unlinkedPointersIndexes[i]].objectIndex;
                 targetChildIndex = FindTargetNodeIndex(childrenIndexes, _objects[unlinkedObjectIndex].bounds);
 
+                if (targetChildIndex == Null)
+                {
+                    int a = FindTargetNodeIndex(childrenIndexes, _objects[unlinkedObjectIndex].bounds);
+                }
+                
                 LinkObjectPointerTo(targetChildIndex, unlinkedPointersIndexes[i]);
             }
 
@@ -148,12 +168,12 @@ namespace SpatialPartitionSystem.Core.Series
             Assert.IsTrue(_nodes[leafIndex].isLeaf);
 
             int objectIndex = _objectPointers[objectPointerIndex].objectIndex;
-            NodeObject<TObject> obj = _objects[objectIndex];
+            var obj = _objects[objectIndex];
             
             obj.leafIndex = leafIndex;
             _objects[objectIndex] = obj;
             
-            Node node = _nodes[leafIndex];
+            var node = _nodes[leafIndex];
 
             if (node.objectsCount == 0)
             {
@@ -185,7 +205,7 @@ namespace SpatialPartitionSystem.Core.Series
             Assert.IsTrue(leafIndex >= 0 && leafIndex < _nodes.Capacity);
             Assert.IsTrue(_nodes[leafIndex].isLeaf);
 
-            Node node = _nodes[leafIndex];
+            var node = _nodes[leafIndex];
 
             if (node.objectsCount == 0)
             {
@@ -220,7 +240,7 @@ namespace SpatialPartitionSystem.Core.Series
             return unlinkedObjects;
         }
         
-        private int FindTargetNodeIndex(int[] nodeIndexes, AABB2D objBounds)
+        private int FindTargetNodeIndex(int[] nodeIndexes, TBounds objBounds)
         {
             Assert.IsNotNull(nodeIndexes);
             
@@ -233,48 +253,6 @@ namespace SpatialPartitionSystem.Core.Series
             }
 
             return Null;
-        }
-        
-        internal int FindTargetNodeIndex(AABB2D objBounds)
-        {
-            int targetNodeIndex = Null;
-
-            TraverseFromRoot(data =>
-            {
-                if (_nodes[data.nodeIndex].bounds.Intersects(objBounds))
-                {
-                    targetNodeIndex = data.nodeIndex;
-                    return ExecutionSignal.ContinueInDepth;
-                }
-
-                return ExecutionSignal.Continue;
-            });
-            
-            return targetNodeIndex;
-        }
-        
-        private static AABB2D GetBoundsFor(AABB2D parentBounds, QuadrantNumber quadrantNumber)
-        {
-            Vector2 extents = 0.5f * parentBounds.Extents;
-            Vector2 center = Vector2.zero;
-            
-            switch (quadrantNumber)
-            {
-                case QuadrantNumber.One:
-                    center = parentBounds.Center + new Vector2(extents.x, extents.y);
-                    break;
-                case QuadrantNumber.Two:
-                    center = parentBounds.Center + new Vector2(-extents.x, extents.y);
-                    break;
-                case QuadrantNumber.Three:
-                    center = parentBounds.Center + new Vector2(-extents.x, -extents.y);
-                    break;
-                case QuadrantNumber.Four:
-                    center = parentBounds.Center + new Vector2(extents.x, -extents.y);
-                    break;
-            }
-
-            return new AABB2D(center, extents);
         }
     }
 }

@@ -1,6 +1,8 @@
 ﻿namespace SpatialPartitionSystem.Core.Series
 {
-    internal struct Node
+    internal struct Node<TBounds, TVector>
+        where TBounds : IAABB<TVector>
+        where TVector : struct
     {
         public int parentIndex;
         public int firstChildIndex;
@@ -8,6 +10,6 @@
         public bool isLeaf;
         
         public byte depth;
-        public AABB2D bounds;
+        public TBounds bounds;
     }
 }

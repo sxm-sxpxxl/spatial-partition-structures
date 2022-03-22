@@ -2,12 +2,15 @@
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    internal interface ISpatialTree<TObject> where TObject : class
+    internal interface ISpatialTree<TObject, TBounds, TVector>
+        where TObject : class
+        where TBounds : IAABB<TVector>
+        where TVector : struct
     {
         void DebugDraw(Transform relativeTransform, bool isPlaymodeOnly = false);
-        bool TryAdd(TObject obj, AABB2D objBounds, out int objectIndex);
+        bool TryAdd(TObject obj, TBounds objBounds, out int objectIndex);
         bool TryRemove(int objectIndex);
-        int Update(int objectIndex, AABB2D updatedObjBounds);
+        int Update(int objectIndex, TBounds updatedObjBounds);
         void CleanUp();
     }
 }

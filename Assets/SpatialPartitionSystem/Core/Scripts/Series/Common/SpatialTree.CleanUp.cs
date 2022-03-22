@@ -2,9 +2,12 @@
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    internal partial class SpatialTree<TObject> : ISpatialTree<TObject> where TObject : class
+    internal sealed partial class SpatialTree<TObject, TBounds, TVector> : ISpatialTree<TObject, TBounds, TVector>
+        where TObject : class
+        where TBounds : IAABB<TVector>
+        where TVector : struct
     {
-        internal int CurrentBranchCount => _nodes.Count / 4;
+        internal int CurrentBranchCount => _nodes.Count / _maxChildrenCount;
         
         public void CleanUp()
         {
@@ -21,9 +24,9 @@ namespace SpatialPartitionSystem.Core.Series
             Assert.IsTrue(branchIndex >= 0 && branchIndex < _nodes.Capacity);
             Assert.IsFalse(_nodes[branchIndex].isLeaf);
 
-            Node node = _nodes[branchIndex];
+            var node = _nodes[branchIndex];
             
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < _maxChildrenCount; i++)
             {
                 _nodes.RemoveAt(node.firstChildIndex + i);
             }
@@ -43,7 +46,7 @@ namespace SpatialPartitionSystem.Core.Series
                 
                 int currentParentIndex = Null, childrenObjectsCount = 0;
                 bool hasBranchAmongChildren = false;
-                Node targetNode;
+                Node<TBounds, TVector> targetNode;
                 
                 TraverseFromRoot(data =>
                 {
@@ -84,7 +87,7 @@ namespace SpatialPartitionSystem.Core.Series
             int firstChildIndex = _nodes[parentBranchIndex].firstChildIndex;
             int[] childrenUnlinkedPointerIndexes = new int[childrenObjectsCount];
             
-            for (int i = 0, j = 0; i < 4; i++)
+            for (int i = 0, j = 0; i < _maxChildrenCount; i++)
             {
                 int[] unlinkedPointerIndexes = UnlinkObjectPointersFrom(firstChildIndex + i);
 
@@ -95,6 +98,7 @@ namespace SpatialPartitionSystem.Core.Series
 
                 for (int k = 0; k < unlinkedPointerIndexes.Length; k++)
                 {
+                    int a = unlinkedPointerIndexes[k];
                     childrenUnlinkedPointerIndexes[j++] = unlinkedPointerIndexes[k];
                 }
             }

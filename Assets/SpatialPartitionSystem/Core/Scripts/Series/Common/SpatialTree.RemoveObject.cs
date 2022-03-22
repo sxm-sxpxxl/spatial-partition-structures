@@ -2,7 +2,10 @@
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    internal partial class SpatialTree<TObject> : ISpatialTree<TObject> where TObject : class
+    internal sealed partial class SpatialTree<TObject, TBounds, TVector> : ISpatialTree<TObject, TBounds, TVector>
+        where TObject : class
+        where TBounds : IAABB<TVector>
+        where TVector : struct
     {
         public bool TryRemove(int objectIndex)
         {

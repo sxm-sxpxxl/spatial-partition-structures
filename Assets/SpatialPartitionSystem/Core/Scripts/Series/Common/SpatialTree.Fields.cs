@@ -1,23 +1,28 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    internal partial class SpatialTree<TObject> : ISpatialTree<TObject> where TObject : class
+    internal sealed partial class SpatialTree<TObject, TBounds, TVector> : ISpatialTree<TObject, TBounds, TVector>
+        where TObject : class
+        where TBounds : IAABB<TVector>
+        where TVector : struct
     {
         internal const int RootIndex = 0, Null = -1;
         
-        private const int MaxPossibleDepth = 8;
+        private const int MaxPossibleDepth = 8, QuadtreeChildrenCount = 4, OctreeChildrenCount = 8;
         
         private static int _cachedEqualNodeIndex;
-        private static AABB2D _cachedEqualBounds;
+        private static TBounds _cachedEqualBounds;
         private static List<int> _cachedLeafIndexes = new List<int>(capacity: 1000);
         
-        private readonly FreeList<Node> _nodes;
+        private readonly FreeList<Node<TBounds, TVector>> _nodes;
         private readonly FreeList<ObjectPointer> _objectPointers;
-        private readonly FreeList<NodeObject<TObject>> _objects;
+        private readonly FreeList<NodeObject<TObject, TBounds, TVector>> _objects;
         
-        private readonly int _maxLeafObjects, _maxDepth;
+        private readonly int _maxLeafObjects, _maxDepth, _maxChildrenCount;
+        private readonly Dimension _dimension;
         
         private readonly int[] _branchIndexes;
         private MissingObjectData[] _missingObjects;
@@ -25,22 +30,24 @@ namespace SpatialPartitionSystem.Core.Series
 
         internal int NodesCapacity => _nodes.Capacity;
 
-        public SpatialTree(AABB2D rootBounds, int maxLeafObjects, int maxDepth, int initialObjectsCapacity)
+        public SpatialTree(Dimension dimension, TBounds rootBounds, int maxLeafObjects, int maxDepth, int initialObjectsCapacity)
         {
             _maxLeafObjects = maxLeafObjects;
             _maxDepth = Mathf.Min(maxDepth, MaxPossibleDepth);
+            _maxChildrenCount = dimension == Dimension.Two ? QuadtreeChildrenCount : OctreeChildrenCount;
+            _dimension = dimension;
 
             int maxNodesCount = GetMaxNodesCountFor(_maxDepth);
-            int maxBranchCount = maxNodesCount / 4;
+            int maxBranchCount = maxNodesCount / _maxChildrenCount;
         
-            _nodes = new FreeList<Node>(maxNodesCount);
+            _nodes = new FreeList<Node<TBounds, TVector>>(maxNodesCount);
             _objectPointers = new FreeList<ObjectPointer>(initialObjectsCapacity);
-            _objects = new FreeList<NodeObject<TObject>>(initialObjectsCapacity);
+            _objects = new FreeList<NodeObject<TObject, TBounds, TVector>>(initialObjectsCapacity);
             _branchIndexes = ArrayUtility.CreateArray(capacity: maxBranchCount, defaultValue: Null);
             _missingObjects = new MissingObjectData[initialObjectsCapacity];
             _queryObjects = new List<TObject>(capacity: initialObjectsCapacity);
             
-            _nodes.Add(new Node
+            _nodes.Add(new Node<TBounds, TVector>
             {
                 parentIndex = Null,
                 firstChildIndex = Null,
@@ -51,21 +58,22 @@ namespace SpatialPartitionSystem.Core.Series
             }, out _);
         }
 
-        public bool ContainsNodeWith(int nodeIndex) => _nodes.Contains(nodeIndex);
+        internal bool ContainsNodeWith(int nodeIndex) => _nodes.Contains(nodeIndex);
 
-        public bool ContainsObjectWith(int objectIndex) => _objects.Contains(objectIndex);
+        internal bool ContainsObjectWith(int objectIndex) => _objects.Contains(objectIndex);
         
-        public Node GetNodeBy(int nodeIndex) => _nodes[nodeIndex];
+        internal Node<TBounds, TVector> GetNodeBy(int nodeIndex) => _nodes[nodeIndex];
 
-        public NodeObject<TObject> GetNodeObjectBy(int objectIndex) => _objects[objectIndex];
+        internal NodeObject<TObject, TBounds, TVector> GetNodeObjectBy(int objectIndex) => _objects[objectIndex];
         
-        private static int GetMaxNodesCountFor(int maxDepth)
+        private int GetMaxNodesCountFor(int maxDepth)
         {
+            Assert.IsTrue(_maxChildrenCount != 0);
+            
             int maxNodesCount = 0;
-
             for (int i = 0; i <= maxDepth; i++)
             {
-                maxNodesCount += (int) Mathf.Pow(4, i);
+                maxNodesCount += (int) Mathf.Pow(_maxChildrenCount, i);
             }
             
             return maxNodesCount;

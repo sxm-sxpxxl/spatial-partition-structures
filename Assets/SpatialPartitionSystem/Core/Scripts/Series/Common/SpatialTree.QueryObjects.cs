@@ -3,15 +3,18 @@ using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    internal partial class SpatialTree<TObject> : ISpatialTree<TObject> where TObject : class
+    internal sealed partial class SpatialTree<TObject, TBounds, TVector> : ISpatialTree<TObject, TBounds, TVector>
+        where TObject : class
+        where TBounds : IAABB<TVector>
+        where TVector : struct
     {
         internal struct AddObjectRequest
         {
-            public AABB2D queryBounds;
+            public TBounds queryBounds;
             public bool needIntersectionCheck;
         }
         
-        public IReadOnlyList<TObject> Query(AABB2D queryBounds)
+        public IReadOnlyList<TObject> Query(TBounds queryBounds)
         {
             _queryObjects.Clear();
 
@@ -37,7 +40,7 @@ namespace SpatialPartitionSystem.Core.Series
         {
             Assert.IsTrue(leafIndex >= 0 && leafIndex < _nodes.Capacity);
             
-            Node leaf = _nodes[leafIndex];
+            var leaf = _nodes[leafIndex];
             Assert.IsTrue(leaf.isLeaf);
 
             if (leaf.objectsCount == 0)
@@ -46,7 +49,7 @@ namespace SpatialPartitionSystem.Core.Series
             }
 
             ObjectPointer currentPointer;
-            NodeObject<TObject> obj;
+            NodeObject<TObject, TBounds, TVector> obj;
             int currentPointerIndex = leaf.firstChildIndex;
             
             do

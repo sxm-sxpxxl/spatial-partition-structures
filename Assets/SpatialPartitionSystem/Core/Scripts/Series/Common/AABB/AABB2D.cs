@@ -1,13 +1,13 @@
 ﻿using System;
+using JetBrains.Annotations;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core.Series
 {
     [Serializable]
-    public struct AABB2D : IEquatable<AABB2D>
+    public struct AABB2D : IAABB<Vector2>
     {
-        private const float EPSILON = 0.001f;
-        
         [SerializeField] private Vector2 center;
         [SerializeField] private Vector2 extents;
 
@@ -29,31 +29,70 @@ namespace SpatialPartitionSystem.Core.Series
 
         public bool Contains(Vector2 point) => Contains(point, Min, Max);
 
-        public bool Contains(AABB2D other)
+        public bool Contains(IAABB<Vector2> other)
         {
-            Vector2 min = Min, max = Max;
-            return Contains(other.center + new Vector2(-other.extents.x, -other.extents.y), min, max) &&
-                   Contains(other.center + new Vector2(other.extents.x, other.extents.y), min, max) &&
-                   Contains(other.center + new Vector2(other.extents.x, -other.extents.y), min, max) &&
-                   Contains(other.center + new Vector2(-other.extents.x, other.extents.y), min, max);
+            Vector2 min = Min, max = Max, otherCenter = other.Center, otherExtents = other.Extents;
+            return Contains(otherCenter + new Vector2(-otherExtents.x, -otherExtents.y), min, max) &&
+                   Contains(otherCenter + new Vector2(otherExtents.x, otherExtents.y), min, max) &&
+                   Contains(otherCenter + new Vector2(otherExtents.x, -otherExtents.y), min, max) &&
+                   Contains(otherCenter + new Vector2(-otherExtents.x, otherExtents.y), min, max);
         }
 
-        public bool Intersects(AABB2D other)
+        public bool Intersects(IAABB<Vector2> other)
         {
-            return MathUtility.IsLessOrEqual(Mathf.Abs(center.x - other.center.x), extents.x + other.extents.x) &&
-                   MathUtility.IsLessOrEqual(Mathf.Abs(center.y - other.center.y), extents.y + other.extents.y);
+            Vector2 otherCenter = other.Center, otherExtents = other.Extents;
+            return MathUtility.IsLessOrEqual(Mathf.Abs(center.x - otherCenter.x), extents.x + otherExtents.x) &&
+                   MathUtility.IsLessOrEqual(Mathf.Abs(center.y - otherCenter.y), extents.y + otherExtents.y);
         }
 
-        public float IntersectionArea(AABB2D other)
+        public float IntersectionArea(IAABB<Vector2> other)
         {
-            float areaWidth = (extents.x + other.extents.x) - Mathf.Abs(center.x - other.center.x);
-            float areaHeight = (extents.y + other.extents.y) - Mathf.Abs(center.y - other.center.y);
+            Vector2 otherCenter = other.Center, otherExtents = other.Extents;
+            float areaWidth = (extents.x + otherExtents.x) - Mathf.Abs(center.x - otherCenter.x);
+            float areaHeight = (extents.y + otherExtents.y) - Mathf.Abs(center.y - otherCenter.y);
             
-            return areaWidth < 0 || areaHeight < 0 ? 0f : areaWidth * areaHeight;
+            return areaWidth < 0f || areaHeight < 0f ? 0f : areaWidth * areaHeight;
         }
 
-        public bool Equals(AABB2D other) => MathUtility.IsApproximateEqual(center, other.center) && MathUtility.IsApproximateEqual(extents, other.extents);
-        
+        public IAABB<Vector2> GetChildBoundsBy(SplitSection splitSectionIndex)
+        {
+            Vector2 childExtents = 0.5f * extents;
+            Vector2 childCenter = Vector2.zero;
+            
+            switch (splitSectionIndex)
+            {
+                case SplitSection.One:
+                    childCenter = center + new Vector2(childExtents.x, childExtents.y);
+                    break;
+                case SplitSection.Two:
+                    childCenter = center + new Vector2(-childExtents.x, childExtents.y);
+                    break;
+                case SplitSection.Three:
+                    childCenter = center + new Vector2(-childExtents.x, -childExtents.y);
+                    break;
+                case SplitSection.Four:
+                    childCenter = center + new Vector2(childExtents.x, -childExtents.y);
+                    break;
+            }
+
+            return new AABB2D(childCenter, childExtents);
+        }
+
+        public IAABB<Vector2> GetExtendedBoundsOn(float offset)
+        {
+            Assert.IsTrue(offset > 0);
+            return new AABB2D(center, extents + offset * Vector2.one);
+        }
+
+        public Vector3 TransformCenter(Transform relativeTransform) => relativeTransform.TransformPoint(center);
+
+        public Vector3 TransformSize(Transform relativeTransform) => relativeTransform.TransformDirection(Size);
+
+        public bool Equals(IAABB<Vector2> other)
+        {
+            return MathUtility.IsApproximateEqual(center, other.Center) && MathUtility.IsApproximateEqual(extents, other.Extents);
+        }
+
         public override bool Equals(object obj) => obj is AABB2D other && Equals(other);
         
         public override int GetHashCode() => unchecked (center.GetHashCode() * 397) ^ extents.GetHashCode();

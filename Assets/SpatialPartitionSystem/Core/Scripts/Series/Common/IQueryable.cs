@@ -2,8 +2,11 @@
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    internal interface IQueryable<TObject> where TObject : class
+    internal interface IQueryable<TObject, TBounds, TVector>
+        where TObject : class
+        where TBounds : IAABB<TVector>
+        where TVector : struct
     {
-        IReadOnlyList<TObject> Query(AABB2D queryBounds);
+        IReadOnlyList<TObject> Query(TBounds queryBounds);
     }
 }

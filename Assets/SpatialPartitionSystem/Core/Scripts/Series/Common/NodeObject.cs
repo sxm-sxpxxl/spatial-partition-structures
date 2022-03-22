@@ -1,9 +1,12 @@
 ﻿namespace SpatialPartitionSystem.Core.Series
 {
-    internal struct NodeObject<TObject> where TObject : class
+    internal struct NodeObject<TObject, TBounds, TVector>
+        where TObject : class
+        where TBounds : IAABB<TVector>
+        where TVector : struct
     {
         public int leafIndex;
         public TObject target;
-        public AABB2D bounds;
+        public TBounds bounds;
     }
 }

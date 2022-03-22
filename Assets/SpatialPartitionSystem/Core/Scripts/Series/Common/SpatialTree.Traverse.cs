@@ -3,33 +3,12 @@ using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    internal partial class SpatialTree<TObject> : ISpatialTree<TObject> where TObject : class
+    internal sealed partial class SpatialTree<TObject, TBounds, TVector> : ISpatialTree<TObject, TBounds, TVector>
+        where TObject : class
+        where TBounds : IAABB<TVector>
+        where TVector : struct
     {
-        internal struct TraverseData
-        {
-            public int nodeIndex;
-            public Node node;
-            
-            public bool isParentChanged;
-            public bool isLastChild;
-
-            public TraverseData(int nodeIndex, Node node, bool isParentChanged, bool isLastChild)
-            {
-                this.nodeIndex = nodeIndex;
-                this.node = node;
-                this.isParentChanged = isParentChanged;
-                this.isLastChild = isLastChild;
-            }
-        }
-        
-        internal enum ExecutionSignal
-        {
-            Continue,
-            ContinueInDepth,
-            Stop
-        }
-        
-        internal void TraverseFrom(int nodeIndex, Func<TraverseData, ExecutionSignal> eachNodeAction, bool needTraverseForStartNode = true)
+        internal void TraverseFrom(int nodeIndex, Func<TraverseData<TBounds, TVector>, ExecutionSignal> eachNodeAction, bool needTraverseForStartNode = true)
         {
             Assert.IsTrue(nodeIndex >= 0 && nodeIndex < _nodes.Capacity);
             Assert.IsNotNull(eachNodeAction);
@@ -38,7 +17,7 @@ namespace SpatialPartitionSystem.Core.Series
             {
                 if (needTraverseForStartNode)
                 {
-                    eachNodeAction.Invoke(new TraverseData(nodeIndex, _nodes[nodeIndex], false, false));   
+                    eachNodeAction.Invoke(new TraverseData<TBounds, TVector>(nodeIndex, _nodes[nodeIndex], false, false));   
                 }
                 return;
             }
@@ -48,7 +27,7 @@ namespace SpatialPartitionSystem.Core.Series
             ExecutionSignal executionSignal;
             if (needTraverseForStartNode)
             {
-                executionSignal = eachNodeAction.Invoke(new TraverseData(nodeIndex, _nodes[nodeIndex], false, false));
+                executionSignal = eachNodeAction.Invoke(new TraverseData<TBounds, TVector>(nodeIndex, _nodes[nodeIndex], false, false));
                 if (executionSignal == ExecutionSignal.Stop)
                 {
                     return;
@@ -56,7 +35,7 @@ namespace SpatialPartitionSystem.Core.Series
             }
 
             int parentIndex, firstChildIndex, childIndex;
-            Node childNode;
+            Node<TBounds, TVector> childNode;
             bool isParentChanged;
 
             for (int traverseBranchIndex = 0, freeBranchIndex = 1;
@@ -67,12 +46,17 @@ namespace SpatialPartitionSystem.Core.Series
                 isParentChanged = true;
                 firstChildIndex = _nodes[parentIndex].firstChildIndex;
 
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < _maxChildrenCount; i++)
                 {
                     childIndex = firstChildIndex + i;
                     childNode = _nodes[childIndex];
                     
-                    executionSignal = eachNodeAction.Invoke(new TraverseData(childIndex, childNode, isParentChanged, i == 3));
+                    executionSignal = eachNodeAction.Invoke(new TraverseData<TBounds, TVector>(
+                        childIndex,
+                        childNode,
+                        isParentChanged,
+                        i == (_maxChildrenCount - 1)
+                    ));
                     if (executionSignal == ExecutionSignal.Stop)
                     {
                         ClearBranchIndexes(fromIndex: traverseBranchIndex, toIndex: freeBranchIndex);
@@ -104,26 +88,26 @@ namespace SpatialPartitionSystem.Core.Series
             }
         }
         
-        internal void TraverseFromRoot(Func<TraverseData, ExecutionSignal> eachNodeAction, bool needTraverseForStartNode = true)
+        internal void TraverseFromRoot(Func<TraverseData<TBounds, TVector>, ExecutionSignal> eachNodeAction, bool needTraverseForStartNode = true)
         {
             Assert.IsNotNull(eachNodeAction);
             TraverseFrom(RootIndex, eachNodeAction, needTraverseForStartNode);
         }
 
-        internal int GetEqualNodeIndexFrom(int nodeIndex, AABB2D equalBounds)
+        internal int GetEqualNodeIndexFrom(int nodeIndex, TBounds equalBounds)
         {
             _cachedEqualNodeIndex = Null;
             _cachedEqualBounds = equalBounds;
             
             TraverseFrom(nodeIndex, data =>
             {
-                if (data.node.bounds == _cachedEqualBounds)
+                if (data.node.bounds.Equals(_cachedEqualBounds))
                 {
                     _cachedEqualNodeIndex = data.nodeIndex;
-                    return SpatialTree<TObject>.ExecutionSignal.Stop;
+                    return ExecutionSignal.Stop;
                 }
 
-                return SpatialTree<TObject>.ExecutionSignal.Continue;
+                return ExecutionSignal.Continue;
             });
             
             return _cachedEqualNodeIndex;

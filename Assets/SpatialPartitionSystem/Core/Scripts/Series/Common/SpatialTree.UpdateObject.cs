@@ -2,7 +2,10 @@
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    internal partial class SpatialTree<TObject> : ISpatialTree<TObject> where TObject : class
+    internal sealed partial class SpatialTree<TObject, TBounds, TVector> : ISpatialTree<TObject, TBounds, TVector>
+        where TObject : class
+        where TBounds : IAABB<TVector>
+        where TVector : struct
     {
         private struct MissingObjectData
         {
@@ -10,7 +13,7 @@ namespace SpatialPartitionSystem.Core.Series
             public TObject obj;
         }
         
-        public int Update(int objectIndex, AABB2D updatedObjBounds)
+        public int Update(int objectIndex, TBounds updatedObjBounds)
         {
             int newObjectIndex;
             
@@ -32,7 +35,7 @@ namespace SpatialPartitionSystem.Core.Series
 
             if (_nodes[linkedLeafIndex].bounds.Intersects(updatedObjBounds))
             {
-                NodeObject<TObject> nodeObject = _objects[objectIndex];
+                var nodeObject = _objects[objectIndex];
                 nodeObject.bounds = updatedObjBounds;
                 
                 _objects[objectIndex] = nodeObject;

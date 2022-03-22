@@ -9,6 +9,13 @@ namespace SpatialPartitionSystem.Core.Series
         public static bool IsGreaterOrEqual(float a, float b) => a > b || IsApproximateEqual(a, b);
 
         public static bool IsLessOrEqual(float a, float b) => a < b || IsApproximateEqual(a, b);
+
+        public static bool IsApproximateEqual(Vector3 a, Vector3 b, float epsilon = FloatingPointComparisonEpsilon)
+        {
+            return IsApproximateEqual(a.x, b.x, epsilon) &&
+                   IsApproximateEqual(a.y, b.y, epsilon) &&
+                   IsApproximateEqual(a.z, b.z, epsilon);
+        }
         
         public static bool IsApproximateEqual(Vector2 a, Vector2 b, float epsilon = FloatingPointComparisonEpsilon)
         {

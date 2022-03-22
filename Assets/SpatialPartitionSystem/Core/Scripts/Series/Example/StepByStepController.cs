@@ -41,25 +41,25 @@ namespace SpatialPartitionSystem.Core.Series.Trees
 
         private readonly Dictionary<Bounds2DObject, int> treeNodesMap = new Dictionary<Bounds2DObject, int>(capacity: 100);
         private readonly Dictionary<Bounds2DObject, int> objectTreeIndexes = new Dictionary<Bounds2DObject, int>(capacity: 100);
-        private SkipQuadtree<Transform> _quadtree;
+        private SkipQuadtree<Transform> _tree;
         private IReadOnlyList<Transform> queryObjects;
 
         private int lastTreeLevel = 0;
         
         private void OnDrawGizmos()
         {
-            if (_quadtree == null || queryBoundsObj == null)
+            if (_tree == null || queryBoundsObj == null)
             {
                 return;
             }
 
-            _quadtree.DebugDrawTreeLevel(treeLevel, transform);
+            _tree.DebugDrawTreeLevel(treeLevel, transform);
             // _quadtree.DebugDraw(transform);
             
             // Gizmos.color = new Color(0f, 1f, 0f, 0.25f);
             // Gizmos.DrawCube(queryBoundsObj.Bounds.Center, 2f * queryBoundsObj.Bounds.Extents + SkipQuadtree<Transform>.EPSILON * Vector2.one);
             
-            queryObjects = _quadtree.ApproximateQuery(queryBoundsObj.Bounds);
+            queryObjects = _tree.ApproximateQuery(queryBoundsObj.Bounds);
             
             if (queryObjects == null)
             {
@@ -77,14 +77,14 @@ namespace SpatialPartitionSystem.Core.Series.Trees
         {
             if (treeLevel != lastTreeLevel)
             {
-                SetActiveObjects(_quadtree.GetObjectsByLevel(treeLevel));
+                SetActiveObjects(_tree.GetObjectsByLevel(treeLevel));
                 lastTreeLevel = treeLevel;
             }
         }
 
         private void Start()
         {
-            _quadtree = new SkipQuadtree<Transform>(MAX_TREE_LEVEL, GetComponent<Bounds2DObject>().Bounds, 1, 4, 8);
+            _tree = new SkipQuadtree<Transform>(MAX_TREE_LEVEL, GetComponent<Bounds2DObject>().Bounds, 1, 4, 8);
             
             DisableAllObjects();
             
@@ -123,7 +123,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
                     return;
                 }
 
-                if (_quadtree.TryRemove(objectIndex))
+                if (_tree.TryRemove(objectIndex))
                 {
                     objectForRemove.gameObject.SetActive(false);
                     Debug.Log($"Object <color=yellow>\'{objectForRemove.name}\'</color> was <color=red>REMOVED</color> to quadtree!");
@@ -133,20 +133,20 @@ namespace SpatialPartitionSystem.Core.Series.Trees
 
             if (Input.GetKeyDown(cleanUpKey))
             {
-                _quadtree.CleanUp();
+                _tree.CleanUp();
                 Debug.Log($"<color=yellow>Quadtree</color> was <color=green>CLEAN UP</color>!");
             }
         }
 
         public void UpdateObject(Bounds2DObject obj)
         {
-            int newObjectIndex = _quadtree.Update(treeNodesMap[obj], obj.Bounds);
+            int newObjectIndex = _tree.Update(treeNodesMap[obj], obj.Bounds);
             treeNodesMap[obj] = newObjectIndex;
         }
 
         public void CleanUp()
         {
-            _quadtree.CleanUp();
+            _tree.CleanUp();
         }
 
         private void SetActiveObjects(IReadOnlyList<Transform> activeObjects)
@@ -164,7 +164,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
 
         private void AddObjectToTree(Bounds2DObject obj)
         {
-            _quadtree.TryAdd(obj.Transform, obj.Bounds, out int objectIndex);
+            _tree.TryAdd(obj.Transform, obj.Bounds, out int objectIndex);
             objectTreeIndexes.Add(obj, objectIndex);
             currentObjectIndex++;
             
