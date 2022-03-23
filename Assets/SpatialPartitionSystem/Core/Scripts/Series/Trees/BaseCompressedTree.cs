@@ -54,26 +54,14 @@ namespace SpatialPartitionSystem.Core.Series.Trees
         public bool TryAdd(TObject obj, TBounds objBounds, out int objectIndex)
         {
             Assert.IsNotNull(obj);
-            
-            int targetNodeIndex = _tree.FindTargetNodeIndex(objBounds);
-            if (targetNodeIndex == Null)
-            {
-                objectIndex = Null;
-                return false;
-            }
-            
-            AddToNodeWith(targetNodeIndex, obj, objBounds, out objectIndex);
-            return true;
+            return _tree.TryAdd(obj, objBounds, AddToCompressedNode, out objectIndex);
         }
 
-        public bool TryRemove(int objectIndex)
-        {
-            return _tree.TryRemove(objectIndex);
-        }
+        public void Remove(int objectIndex) => _tree.Remove(objectIndex);
 
         public int Update(int objectIndex, TBounds updatedObjBounds)
         {
-            return _tree.Update(objectIndex, updatedObjBounds);
+            return _tree.Update(objectIndex, updatedObjBounds, AddToCompressedNode);
         }
 
         public void CleanUp()
@@ -92,10 +80,12 @@ namespace SpatialPartitionSystem.Core.Series.Trees
             return _tree.Query(queryBounds);
         }
         
-        internal void AddToNodeWith(int nodeIndex, TObject obj, TBounds objBounds, out int objectIndex)
+        internal int AddToCompressedNode(int nodeIndex, TObject obj, TBounds objBounds)
         {
             Assert.IsTrue(_tree.ContainsNodeWith(nodeIndex));
             Assert.IsNotNull(obj);
+
+            int objectIndex;
             
             if (_tree.GetNodeBy(nodeIndex).isLeaf)
             {
@@ -108,6 +98,8 @@ namespace SpatialPartitionSystem.Core.Series.Trees
                 objectIndex = _tree.AddObjectToLeaf(decompressedTargetLeafIndex, obj, objBounds);
                 Compress(nodeIndex);
             }
+
+            return objectIndex;
         }
 
         internal Node<TBounds, TVector> GetNodeBy(int nodeIndex) => _tree.GetNodeBy(nodeIndex);
@@ -262,27 +254,29 @@ namespace SpatialPartitionSystem.Core.Series.Trees
             Assert.IsTrue(_tree.ContainsNodeWith(branchIndex));
             Assert.IsFalse(_tree.GetNodeBy(branchIndex).isLeaf);
 
-            int lastBranchIndex = branchIndex, targetLeafIndex = Null;
+            int currentBranchIndex = branchIndex, lastBranchIndex = Null, targetLeafIndex = Null;
             TBounds firstChildNodeBounds = _tree.GetNodeBy(_tree.GetNodeBy(branchIndex).firstChildIndex).bounds;
             bool isChildFoundForFirstChildNode, isChildFoundForTargetObject;
             
             do
             {
                 isChildFoundForFirstChildNode = isChildFoundForTargetObject = false;
-                int[] childrenIndexes = _tree.Split(lastBranchIndex);
+                int[] childrenIndexes = _tree.Split(currentBranchIndex);
 
                 for (int i = 0; i < childrenIndexes.Length; i++)
                 {
                     if (_tree.GetNodeBy(childrenIndexes[i]).bounds.Contains(firstChildNodeBounds))
                     {
-                        _tree.LinkChildrenNodesTo(childrenIndexes[i], _tree.GetNodeBy(lastBranchIndex).firstChildIndex);
-                        _tree.LinkChildrenNodesTo(lastBranchIndex, childrenIndexes[0]);
+                        _tree.LinkChildrenNodesTo(childrenIndexes[i], _tree.GetNodeBy(currentBranchIndex).firstChildIndex);
+                        _tree.LinkChildrenNodesTo(currentBranchIndex, childrenIndexes[0]);
+
+                        lastBranchIndex = currentBranchIndex;
+                        currentBranchIndex = childrenIndexes[i];
                         
-                        lastBranchIndex = childrenIndexes[i];
                         isChildFoundForFirstChildNode = true;
                     }
 
-                    if (_tree.GetNodeBy(childrenIndexes[i]).bounds.Intersects(objBounds) && lastBranchIndex != childrenIndexes[i])
+                    if (_tree.GetNodeBy(childrenIndexes[i]).bounds.Intersects(objBounds) && currentBranchIndex != childrenIndexes[i])
                     {
                         targetLeafIndex = childrenIndexes[i];
                         isChildFoundForTargetObject = true;
@@ -293,8 +287,10 @@ namespace SpatialPartitionSystem.Core.Series.Trees
                         break;
                     }
                 }
+                
+                Assert.IsTrue(currentBranchIndex != lastBranchIndex);
             }
-            while (_tree.GetNodeBy(lastBranchIndex).isLeaf == false && targetLeafIndex == Null);
+            while (_tree.GetNodeBy(currentBranchIndex).isLeaf == false && targetLeafIndex == Null);
             
             Assert.IsFalse(targetLeafIndex == Null);
             return targetLeafIndex;

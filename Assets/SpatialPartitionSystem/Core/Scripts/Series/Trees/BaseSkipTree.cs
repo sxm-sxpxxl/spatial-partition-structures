@@ -104,11 +104,12 @@ namespace SpatialPartitionSystem.Core.Series.Trees
             
             int[] targetNodeIndexesByLevels = FindTargetNodeIndexesByLevels(objBounds);
             
-            _levelTrees[0].AddToNodeWith(targetNodeIndexesByLevels[0], obj, objBounds, out objectIndex);
+            objectIndex = _levelTrees[0].AddToCompressedNode(targetNodeIndexesByLevels[0], obj, objBounds);
             _levelTreesObjectIndexes.Add(obj, ArrayUtility.CreateArray(capacity: _levelTrees.Length, defaultValue: Null));
             _levelTreesObjectIndexes[obj][0] = objectIndex;
 
             bool isAbortAddingObjectToNextLevelTrees = false;
+            int objectIndexForCurrentLevel;
             for (int i = 1; i < _levelTrees.Length; i++)
             {
                 if (IsSkippedObject)
@@ -117,7 +118,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
                     break;
                 }
 
-                _levelTrees[i].AddToNodeWith(targetNodeIndexesByLevels[i], obj, objBounds, out int objectIndexForCurrentLevel);
+                objectIndexForCurrentLevel = _levelTrees[i].AddToCompressedNode(targetNodeIndexesByLevels[i], obj, objBounds);
                 _levelTreesObjectIndexes[obj][i] = objectIndexForCurrentLevel;
             }
 
@@ -129,14 +130,12 @@ namespace SpatialPartitionSystem.Core.Series.Trees
             return true;
         }
 
-        public bool TryRemove(int objectIndex)
+        public void Remove(int objectIndex)
         {
             Assert.IsTrue(_levelTrees[0].ContainsObjectWith(objectIndex));
             TObject obj = _levelTrees[0].GetNodeObjectBy(objectIndex).target;
             
-            bool isObjectRemoved = true;
             int[] objectIndexesByLevel = _levelTreesObjectIndexes[obj];
-            
             for (int i = 0; i < objectIndexesByLevel.Length; i++)
             {
                 if (objectIndexesByLevel[i] == Null)
@@ -144,15 +143,10 @@ namespace SpatialPartitionSystem.Core.Series.Trees
                     break;
                 }
 
-                isObjectRemoved &= _levelTrees[i].TryRemove(objectIndexesByLevel[i]);
+                _levelTrees[i].Remove(objectIndexesByLevel[i]);
             }
             
-            if (isObjectRemoved)
-            {
-                _levelTreesObjectIndexes.Remove(obj);
-            }
-            
-            return isObjectRemoved;
+            _levelTreesObjectIndexes.Remove(obj);
         }
 
         public void CleanUp()
@@ -242,7 +236,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
         {
             Assert.IsTrue(_levelTrees[0].ContainsNodeWith(nodeIndex));
             int notCriticalNodeIndex = GetNotCriticalNodeIndexOnMaxTreeLevel(nodeIndex, out int maxTreeLevel);
-
+            
             while (true)
             {
                 if (IsCriticalNodeOn(notCriticalNodeIndex, maxTreeLevel) == false)

@@ -51,7 +51,7 @@ namespace SpatialPartitionSystem.Core.Series
             ObjectPointer currentPointer;
             NodeObject<TObject, TBounds, TVector> obj;
             int currentPointerIndex = leaf.firstChildIndex;
-            
+
             do
             {
                 currentPointer = _objectPointers[currentPointerIndex];

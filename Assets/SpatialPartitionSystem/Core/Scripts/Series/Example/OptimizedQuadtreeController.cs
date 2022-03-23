@@ -112,7 +112,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
 
         public void RemoveObject(Bounds2DObject obj)
         {
-            _tree.TryRemove(treeNodesMap[obj]);
+            _tree.Remove(treeNodesMap[obj]);
             _objects.Remove(obj);
         }
         

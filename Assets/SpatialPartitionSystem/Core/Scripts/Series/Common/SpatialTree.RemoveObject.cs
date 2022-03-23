@@ -7,26 +7,21 @@ namespace SpatialPartitionSystem.Core.Series
         where TBounds : IAABB<TVector>
         where TVector : struct
     {
-        public bool TryRemove(int objectIndex)
-        {
-            Assert.IsTrue(_objects.Contains(objectIndex));
-            
-            int linkedLeafIndex = _objects[objectIndex].leafIndex;
-            Assert.IsFalse(linkedLeafIndex == Null);
-            
-            Remove(objectIndex);
-            return true;
-        }
-        
-        private void Remove(int objectIndex)
+        public void Remove(int objectIndex)
         {
             Assert.IsTrue(objectIndex >= 0 && objectIndex < _objects.Capacity);
 
-            int leafIndex = _objects[objectIndex].leafIndex;
-            Assert.IsTrue(leafIndex >= 0 && leafIndex < _nodes.Capacity);
-            Assert.IsTrue(_nodes[leafIndex].isLeaf);
+            if (IsObjectMissing(objectIndex))
+            {
+                _missingObjects[objectIndex].Reset();
+                return;
+            }
             
-            int[] unlinkedPointersIndexes = UnlinkObjectPointersFrom(leafIndex);
+            int linkedLeafIndex = _objects[objectIndex].leafIndex;
+            Assert.IsTrue(linkedLeafIndex >= 0 && linkedLeafIndex < _nodes.Capacity);
+            Assert.IsTrue(_nodes[linkedLeafIndex].isLeaf);
+            
+            int[] unlinkedPointersIndexes = UnlinkObjectPointersFrom(linkedLeafIndex);
 
             for (int i = 0; i < unlinkedPointersIndexes.Length; i++)
             {
@@ -36,7 +31,7 @@ namespace SpatialPartitionSystem.Core.Series
                 }
                 else
                 {
-                    LinkObjectPointerTo(leafIndex, unlinkedPointersIndexes[i]);
+                    LinkObjectPointerTo(linkedLeafIndex, unlinkedPointersIndexes[i]);
                 }
             }
         }

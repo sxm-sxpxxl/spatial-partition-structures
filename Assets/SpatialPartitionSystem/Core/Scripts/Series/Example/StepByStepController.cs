@@ -123,12 +123,11 @@ namespace SpatialPartitionSystem.Core.Series.Trees
                     return;
                 }
 
-                if (_tree.TryRemove(objectIndex))
-                {
-                    objectForRemove.gameObject.SetActive(false);
-                    Debug.Log($"Object <color=yellow>\'{objectForRemove.name}\'</color> was <color=red>REMOVED</color> to quadtree!");
-                    objectForRemove = null;
-                }
+                _tree.Remove(objectIndex);
+                
+                objectForRemove.gameObject.SetActive(false);
+                Debug.Log($"Object <color=yellow>\'{objectForRemove.name}\'</color> was <color=red>REMOVED</color> to quadtree!");
+                objectForRemove = null;
             }
 
             if (Input.GetKeyDown(cleanUpKey))

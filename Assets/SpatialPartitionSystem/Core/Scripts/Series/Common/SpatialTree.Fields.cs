@@ -64,7 +64,10 @@ namespace SpatialPartitionSystem.Core.Series
         
         internal Node<TBounds, TVector> GetNodeBy(int nodeIndex) => _nodes[nodeIndex];
 
-        internal NodeObject<TObject, TBounds, TVector> GetNodeObjectBy(int objectIndex) => _objects[objectIndex];
+        internal NodeObject<TObject, TBounds, TVector> GetNodeObjectBy(int objectIndex)
+        {
+            return IsObjectMissing(objectIndex) ? _missingObjects[objectIndex].nodeObject : _objects[objectIndex];
+        }
         
         private int GetMaxNodesCountFor(int maxDepth)
         {

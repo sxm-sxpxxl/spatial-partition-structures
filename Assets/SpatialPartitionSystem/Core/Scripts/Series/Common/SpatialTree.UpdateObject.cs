@@ -1,4 +1,5 @@
-﻿using UnityEngine.Assertions;
+﻿using System;
+using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core.Series
 {
@@ -10,23 +11,38 @@ namespace SpatialPartitionSystem.Core.Series
         private struct MissingObjectData
         {
             public bool isMissing;
-            public TObject obj;
+            public NodeObject<TObject, TBounds, TVector> nodeObject;
+
+            public void Set(NodeObject<TObject, TBounds, TVector> value)
+            {
+                isMissing = true;
+                nodeObject = value;
+            }
+
+            public void Reset()
+            {
+                isMissing = false;
+                nodeObject = default;
+            }
         }
         
         public int Update(int objectIndex, TBounds updatedObjBounds)
+        {
+            return Update(objectIndex, updatedObjBounds, AddObjectToLeaf);
+        }
+
+        public int Update(int objectIndex, TBounds updatedObjBounds, Func<int, TObject, TBounds, int> addObjectAction)
         {
             int newObjectIndex;
             
             if (IsObjectMissing(objectIndex))
             {
-                if (TryAdd(_missingObjects[objectIndex].obj, updatedObjBounds, out newObjectIndex) == false)
+                if (TryAdd(_missingObjects[objectIndex].nodeObject.target, updatedObjBounds, addObjectAction, out newObjectIndex) == false)
                 {
                     return objectIndex;
                 }
                 
-                _missingObjects[objectIndex].isMissing = false;
-                _missingObjects[objectIndex].obj = null;
-                
+                _missingObjects[objectIndex].Reset();
                 return newObjectIndex;
             }
             
@@ -37,19 +53,17 @@ namespace SpatialPartitionSystem.Core.Series
             {
                 var nodeObject = _objects[objectIndex];
                 nodeObject.bounds = updatedObjBounds;
-                
                 _objects[objectIndex] = nodeObject;
+                
                 return objectIndex;
             }
 
-            TObject obj = _objects[objectIndex].target;
+            var removedNodeObject = _objects[objectIndex];
             Remove(objectIndex);
 
-            if (TryAdd(obj, updatedObjBounds, out newObjectIndex) == false)
+            if (TryAdd(removedNodeObject.target, updatedObjBounds, addObjectAction, out newObjectIndex) == false)
             {
-                _missingObjects[objectIndex].isMissing = true;
-                _missingObjects[objectIndex].obj = obj;
-                
+                _missingObjects[objectIndex].Set(removedNodeObject);
                 return objectIndex;
             }
 

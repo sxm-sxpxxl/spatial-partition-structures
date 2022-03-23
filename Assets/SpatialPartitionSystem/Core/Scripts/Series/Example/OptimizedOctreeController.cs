@@ -111,7 +111,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
 
         public void RemoveObject(Bounds3DObject obj)
         {
-            _tree.TryRemove(treeNodesMap[obj]);
+            _tree.Remove(treeNodesMap[obj]);
             _objects.Remove(obj);
         }
         

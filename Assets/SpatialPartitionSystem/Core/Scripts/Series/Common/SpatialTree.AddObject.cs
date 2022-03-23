@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core.Series
@@ -10,16 +11,22 @@ namespace SpatialPartitionSystem.Core.Series
     {
         public bool TryAdd(TObject obj, TBounds objBounds, out int objectIndex)
         {
+            return TryAdd(obj, objBounds, AddObjectToLeaf, out objectIndex);
+        }
+
+        internal bool TryAdd(TObject obj, TBounds objBounds, Func<int, TObject, TBounds, int> addObjectAction, out int objectIndex)
+        {
             Assert.IsNotNull(obj);
-            
+            Assert.IsNotNull(addObjectAction);
+
             int targetNodeIndex = FindTargetNodeIndex(objBounds);
             if (targetNodeIndex == Null)
             {
                 objectIndex = Null;
                 return false;
             }
-            
-            objectIndex = AddObjectToLeaf(targetNodeIndex, obj, objBounds);
+
+            objectIndex = addObjectAction.Invoke(targetNodeIndex, obj, objBounds);
             return true;
         }
         
@@ -140,20 +147,12 @@ namespace SpatialPartitionSystem.Core.Series
                 unlinkedObjectIndex = _objectPointers[unlinkedPointersIndexes[i]].objectIndex;
                 targetChildIndex = FindTargetNodeIndex(childrenIndexes, _objects[unlinkedObjectIndex].bounds);
 
-                if (targetChildIndex == Null)
-                {
-                    int a = FindTargetNodeIndex(childrenIndexes, _objects[unlinkedObjectIndex].bounds);
-                }
-                
+                Assert.IsTrue(targetChildIndex != Null);
                 LinkObjectPointerTo(targetChildIndex, unlinkedPointersIndexes[i]);
             }
 
             targetChildIndex = FindTargetNodeIndex(childrenIndexes, objBounds);
-            
-            if (targetChildIndex == Null)
-            {
-                return Null;
-            }
+            Assert.IsTrue(targetChildIndex != Null);
             
             int objectIndex = AddObjectToLeaf(targetChildIndex, obj, objBounds);
             LinkChildrenNodesTo(leafIndex, childrenIndexes[0]);

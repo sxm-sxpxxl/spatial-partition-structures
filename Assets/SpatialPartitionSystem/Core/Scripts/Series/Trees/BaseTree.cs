@@ -25,24 +25,12 @@ namespace SpatialPartitionSystem.Core.Series.Trees
             return _tree.TryAdd(obj, objBounds, out objectIndex);
         }
 
-        public bool TryRemove(int objectIndex)
-        {
-            return _tree.TryRemove(objectIndex);
-        }
+        public void Remove(int objectIndex) => _tree.Remove(objectIndex);
 
-        public int Update(int objectIndex, TBounds updatedObjBounds)
-        {
-            return _tree.Update(objectIndex, updatedObjBounds);
-        }
+        public int Update(int objectIndex, TBounds updatedObjBounds) => _tree.Update(objectIndex, updatedObjBounds);
 
-        public void CleanUp()
-        {
-            _tree.CleanUp();
-        }
+        public void CleanUp() => _tree.CleanUp();
 
-        public IReadOnlyList<TObject> Query(TBounds queryBounds)
-        {
-            return _tree.Query(queryBounds);
-        }
+        public IReadOnlyList<TObject> Query(TBounds queryBounds) => _tree.Query(queryBounds);
     }
 }

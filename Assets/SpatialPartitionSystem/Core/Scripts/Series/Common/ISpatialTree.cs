@@ -9,7 +9,7 @@ namespace SpatialPartitionSystem.Core.Series
     {
         void DebugDraw(Transform relativeTransform, bool isPlaymodeOnly = false);
         bool TryAdd(TObject obj, TBounds objBounds, out int objectIndex);
-        bool TryRemove(int objectIndex);
+        void Remove(int objectIndex);
         int Update(int objectIndex, TBounds updatedObjBounds);
         void CleanUp();
     }

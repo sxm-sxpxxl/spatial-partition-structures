@@ -6,7 +6,7 @@
     {
         public int parentIndex;
         public int firstChildIndex;
-        public byte objectsCount;
+        public int objectsCount;
         public bool isLeaf;
         
         public byte depth;

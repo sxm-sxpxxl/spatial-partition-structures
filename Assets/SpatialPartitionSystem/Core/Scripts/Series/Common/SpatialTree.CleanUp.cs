@@ -46,22 +46,19 @@ namespace SpatialPartitionSystem.Core.Series
                 
                 int currentParentIndex = Null, childrenObjectsCount = 0;
                 bool hasBranchAmongChildren = false;
-                Node<TBounds, TVector> targetNode;
                 
                 TraverseFromRoot(data =>
                 {
-                    targetNode = _nodes[data.nodeIndex];
-                    
-                    if (currentParentIndex != targetNode.parentIndex)
+                    if (currentParentIndex != data.node.parentIndex)
                     {
-                        currentParentIndex = targetNode.parentIndex;
+                        currentParentIndex = data.node.parentIndex;
                         childrenObjectsCount = 0;
                         hasBranchAmongChildren = false;
                     }
                     
-                    if (hasBranchAmongChildren == false && targetNode.isLeaf)
+                    if (hasBranchAmongChildren == false && data.node.isLeaf)
                     {
-                        childrenObjectsCount += targetNode.objectsCount;
+                        childrenObjectsCount += data.node.objectsCount;
                     }
                     else
                     {
@@ -98,7 +95,6 @@ namespace SpatialPartitionSystem.Core.Series
 
                 for (int k = 0; k < unlinkedPointerIndexes.Length; k++)
                 {
-                    int a = unlinkedPointerIndexes[k];
                     childrenUnlinkedPointerIndexes[j++] = unlinkedPointerIndexes[k];
                 }
             }
