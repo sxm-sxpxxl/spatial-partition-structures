@@ -5,7 +5,8 @@ using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core.Series.Trees
 {
-    public class BaseCompressedTree<TObject, TBounds, TVector> : ISpatialTree<TObject, TBounds, TVector>, IQueryable<TObject, TBounds, TVector>
+    public class BaseCompressedTree<TObject, TBounds, TVector>
+        : ISpatialTree<TObject, TBounds, TVector>, IQueryable<TObject, TBounds, TVector>
         where TObject : class
         where TBounds : IAABB<TVector>
         where TVector : struct
@@ -43,26 +44,19 @@ namespace SpatialPartitionSystem.Core.Series.Trees
         
         public BaseCompressedTree(Dimension dimension, TBounds rootBounds, int maxLeafObjects, int maxDepth, int initialObjectsCapacity)
         {
+            Assert.IsTrue(maxLeafObjects > 0);
+            Assert.IsTrue(maxDepth > 0);
+            Assert.IsTrue(initialObjectsCapacity > 0);
             _tree = new SpatialTree<TObject, TBounds, TVector>(dimension, rootBounds, maxLeafObjects, maxDepth, initialObjectsCapacity);
         }
 
-        public void DebugDraw(Transform relativeTransform, bool isPlaymodeOnly = false)
-        {
-            _tree.DebugDraw(relativeTransform, isPlaymodeOnly);
-        }
+        public void DebugDraw(Transform relativeTransform, bool isPlaymodeOnly = false) => _tree.DebugDraw(relativeTransform, isPlaymodeOnly);
 
-        public bool TryAdd(TObject obj, TBounds objBounds, out int objectIndex)
-        {
-            Assert.IsNotNull(obj);
-            return _tree.TryAdd(obj, objBounds, AddToCompressedNode, out objectIndex);
-        }
+        public bool TryAdd(TObject obj, TBounds objBounds, out int objectIndex) => _tree.TryAdd(obj, objBounds, AddToCompressedNode, out objectIndex);
 
         public void Remove(int objectIndex) => _tree.Remove(objectIndex);
 
-        public int Update(int objectIndex, TBounds updatedObjBounds)
-        {
-            return _tree.Update(objectIndex, updatedObjBounds, AddToCompressedNode);
-        }
+        public int Update(int objectIndex, TBounds updatedObjBounds) => _tree.Update(objectIndex, updatedObjBounds, AddToCompressedNode);
 
         public void CleanUp()
         {
@@ -75,10 +69,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
             _tree.DeepCleanUp();
         }
 
-        public IReadOnlyList<TObject> Query(TBounds queryBounds)
-        {
-            return _tree.Query(queryBounds);
-        }
+        public IReadOnlyList<TObject> Query(TBounds queryBounds) => _tree.Query(queryBounds);
         
         internal int AddToCompressedNode(int nodeIndex, TObject obj, TBounds objBounds)
         {
@@ -191,7 +182,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
         private CompressData GetCompressDataFor(int branchIndex)
         {
             Assert.IsTrue(_tree.ContainsNodeWith(branchIndex));
-            Assert.IsFalse(_tree.GetNodeBy(branchIndex).isLeaf);
+            Assert.IsTrue(_tree.GetNodeBy(branchIndex).isLeaf == false);
 
             int[] notInterestingNodeIndexes = new int[_tree.CurrentBranchCount];
             int currentNotInterestingNodeIndex = 0;
@@ -216,7 +207,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
 
                 if (data.isLastChild)
                 {
-                    bool isNotInterestingNode = childrenObjectCount == 0 && branchAmongChildrenCount == 1;
+                    isNotInterestingNode = childrenObjectCount == 0 && branchAmongChildrenCount == 1;
                     
                     if (isNotInterestingNode)
                     {
@@ -252,15 +243,17 @@ namespace SpatialPartitionSystem.Core.Series.Trees
         private int Decompress(int branchIndex, TBounds objBounds)
         {
             Assert.IsTrue(_tree.ContainsNodeWith(branchIndex));
-            Assert.IsFalse(_tree.GetNodeBy(branchIndex).isLeaf);
+            Assert.IsTrue(_tree.GetNodeBy(branchIndex).isLeaf == false);
 
-            int currentBranchIndex = branchIndex, lastBranchIndex = Null, targetLeafIndex = Null;
+            int currentBranchIndex = branchIndex, lastBranchIndex, targetLeafIndex = Null;
             TBounds firstChildNodeBounds = _tree.GetNodeBy(_tree.GetNodeBy(branchIndex).firstChildIndex).bounds;
             bool isChildFoundForFirstChildNode, isChildFoundForTargetObject;
             
             do
             {
+                lastBranchIndex = currentBranchIndex;
                 isChildFoundForFirstChildNode = isChildFoundForTargetObject = false;
+                
                 int[] childrenIndexes = _tree.Split(currentBranchIndex);
 
                 for (int i = 0; i < childrenIndexes.Length; i++)
@@ -270,9 +263,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
                         _tree.LinkChildrenNodesTo(childrenIndexes[i], _tree.GetNodeBy(currentBranchIndex).firstChildIndex);
                         _tree.LinkChildrenNodesTo(currentBranchIndex, childrenIndexes[0]);
 
-                        lastBranchIndex = currentBranchIndex;
                         currentBranchIndex = childrenIndexes[i];
-                        
                         isChildFoundForFirstChildNode = true;
                     }
 
@@ -287,12 +278,12 @@ namespace SpatialPartitionSystem.Core.Series.Trees
                         break;
                     }
                 }
-                
+
                 Assert.IsTrue(currentBranchIndex != lastBranchIndex);
             }
             while (_tree.GetNodeBy(currentBranchIndex).isLeaf == false && targetLeafIndex == Null);
             
-            Assert.IsFalse(targetLeafIndex == Null);
+            Assert.IsTrue(targetLeafIndex != Null);
             return targetLeafIndex;
         }
     }

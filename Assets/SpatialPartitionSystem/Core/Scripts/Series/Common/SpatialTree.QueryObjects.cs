@@ -3,10 +3,7 @@ using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    internal sealed partial class SpatialTree<TObject, TBounds, TVector> : ISpatialTree<TObject, TBounds, TVector>
-        where TObject : class
-        where TBounds : IAABB<TVector>
-        where TVector : struct
+    internal sealed partial class SpatialTree<TObject, TBounds, TVector>
     {
         internal struct AddObjectRequest
         {
@@ -39,6 +36,7 @@ namespace SpatialPartitionSystem.Core.Series
         internal void AddLeafObjects(int leafIndex, ICollection<TObject> objects, AddObjectRequest request)
         {
             Assert.IsTrue(leafIndex >= 0 && leafIndex < _nodes.Capacity);
+            Assert.IsNotNull(objects);
             
             var leaf = _nodes[leafIndex];
             Assert.IsTrue(leaf.isLeaf);
@@ -49,26 +47,29 @@ namespace SpatialPartitionSystem.Core.Series
             }
 
             ObjectPointer currentPointer;
-            NodeObject<TObject, TBounds, TVector> obj;
+            NodeObject<TObject, TBounds, TVector> nodeObject;
             int currentPointerIndex = leaf.firstChildIndex;
 
             do
             {
                 currentPointer = _objectPointers[currentPointerIndex];
-                obj = _objects[currentPointer.objectIndex];
+                nodeObject = _objects[currentPointer.objectIndex];
 
-                if (request.needIntersectionCheck == false || request.queryBounds.Intersects(obj.bounds))
+                if (request.needIntersectionCheck == false || request.queryBounds.Intersects(nodeObject.bounds))
                 {
-                    objects.Add(obj.target);
+                    objects.Add(nodeObject.target);
                 }
                 
                 currentPointerIndex = currentPointer.nextObjectPointerIndex;
             }
             while (currentPointer.nextObjectPointerIndex != Null);
         }
-        
+
         internal void DeepAddNodeObjects(int nodeIndex, ICollection<TObject> objects)
         {
+            Assert.IsTrue(_nodes.Contains(nodeIndex));
+            Assert.IsNotNull(objects);
+            
             if (_nodes[nodeIndex].isLeaf)
             {
                 AddLeafObjects(nodeIndex, objects, new AddObjectRequest { needIntersectionCheck = false });

@@ -105,6 +105,7 @@ namespace SpatialPartitionSystem.Core.Series
 
         public bool Equals(IAABB<Vector3> other)
         {
+            Assert.IsNotNull(other);
             return MathUtility.IsApproximateEqual(center, other.Center) && MathUtility.IsApproximateEqual(extents, other.Extents);
         }
 
@@ -112,10 +113,6 @@ namespace SpatialPartitionSystem.Core.Series
         
         public override int GetHashCode() => unchecked (center.GetHashCode() * 397) ^ extents.GetHashCode();
         
-        public static bool operator ==(AABB3D a, AABB3D b) => a.Equals(b);
-        
-        public static bool operator !=(AABB3D a, AABB3D b) => !a.Equals(b);
-
         private static bool Contains(Vector3 point, Vector3 min, Vector3 max)
         {
             return MathUtility.IsGreaterOrEqual(point.x, min.x) && MathUtility.IsLessOrEqual(point.x, max.x) &&

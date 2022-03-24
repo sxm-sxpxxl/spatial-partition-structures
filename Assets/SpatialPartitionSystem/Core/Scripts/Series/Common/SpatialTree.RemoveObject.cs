@@ -2,19 +2,15 @@
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    internal sealed partial class SpatialTree<TObject, TBounds, TVector> : ISpatialTree<TObject, TBounds, TVector>
-        where TObject : class
-        where TBounds : IAABB<TVector>
-        where TVector : struct
+    internal sealed partial class SpatialTree<TObject, TBounds, TVector>
     {
         public void Remove(int objectIndex)
         {
-            Assert.IsTrue(objectIndex >= 0 && objectIndex < _objects.Capacity);
+            Assert.IsTrue(_objects.Contains(objectIndex));
 
             if (IsObjectMissing(objectIndex))
             {
-                _missingObjects[objectIndex].Reset();
-                return;
+                _missingObjects[objectIndex] = false;
             }
             
             int linkedLeafIndex = _objects[objectIndex].leafIndex;
@@ -38,7 +34,7 @@ namespace SpatialPartitionSystem.Core.Series
         
         private void DeleteObject(int objectPointerIndex)
         {
-            Assert.IsTrue(objectPointerIndex >= 0 && objectPointerIndex < _objectPointers.Capacity);
+            Assert.IsTrue(_objectPointers.Contains(objectPointerIndex));
             
             _objects.RemoveAt(_objectPointers[objectPointerIndex].objectIndex);
             _objectPointers.RemoveAt(objectPointerIndex);

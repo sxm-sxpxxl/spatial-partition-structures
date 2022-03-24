@@ -2,10 +2,7 @@
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    internal sealed partial class SpatialTree<TObject, TBounds, TVector> : ISpatialTree<TObject, TBounds, TVector>
-        where TObject : class
-        where TBounds : IAABB<TVector>
-        where TVector : struct
+    internal sealed partial class SpatialTree<TObject, TBounds, TVector>
     {
         internal int CurrentBranchCount => _nodes.Count / _maxChildrenCount;
         
@@ -22,7 +19,7 @@ namespace SpatialPartitionSystem.Core.Series
         internal void DeleteChildrenNodesFor(int branchIndex)
         {
             Assert.IsTrue(branchIndex >= 0 && branchIndex < _nodes.Capacity);
-            Assert.IsFalse(_nodes[branchIndex].isLeaf);
+            Assert.IsTrue(_nodes[branchIndex].isLeaf == false);
 
             var node = _nodes[branchIndex];
             
@@ -79,7 +76,7 @@ namespace SpatialPartitionSystem.Core.Series
         private void LocalCleanUp(int parentBranchIndex, int childrenObjectsCount)
         {
             Assert.IsTrue(parentBranchIndex >= 0 && parentBranchIndex < _nodes.Capacity);
-            Assert.IsFalse(_nodes[parentBranchIndex].isLeaf);
+            Assert.IsTrue(_nodes[parentBranchIndex].isLeaf == false);
             
             int firstChildIndex = _nodes[parentBranchIndex].firstChildIndex;
             int[] childrenUnlinkedPointerIndexes = new int[childrenObjectsCount];

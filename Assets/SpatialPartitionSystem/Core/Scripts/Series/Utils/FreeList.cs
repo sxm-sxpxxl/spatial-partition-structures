@@ -3,9 +3,9 @@ using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    internal sealed class FreeList<T>
+    internal sealed class FreeList<TObject>
     {
-        private T[] _items;
+        private TObject[] _items;
         private readonly Queue<int> _freeIndexes;
         private int _nextItemIndex;
 
@@ -14,7 +14,7 @@ namespace SpatialPartitionSystem.Core.Series
 
         private bool HasFreeItem => _freeIndexes.Count != 0;
 
-        public T this[int index]
+        internal TObject this[int index]
         {
             get
             {
@@ -28,14 +28,14 @@ namespace SpatialPartitionSystem.Core.Series
             }
         }
         
-        public FreeList(int capacity = 128)
+        internal FreeList(int capacity = 128)
         {
-            _items = new T[capacity];
+            _items = new TObject[capacity];
             _freeIndexes = new Queue<int>(capacity);
             _nextItemIndex = 0;
         }
 
-        public void Add(T item, out int itemIndex)
+        internal void Add(TObject item, out int itemIndex)
         {
             if (HasFreeItem)
             {
@@ -47,7 +47,7 @@ namespace SpatialPartitionSystem.Core.Series
             {
                 if (_nextItemIndex == _items.Length)
                 {
-                    T[] newArray = new T[2 * _items.Length];
+                    TObject[] newArray = new TObject[2 * _items.Length];
                     _items.CopyTo(newArray, 0);
                     _items = newArray;
                 }
@@ -60,14 +60,14 @@ namespace SpatialPartitionSystem.Core.Series
             Count++;
         }
 
-        public void RemoveAt(int index)
+        internal void RemoveAt(int index)
         {
             Assert.IsTrue(index >= 0 && index < Capacity);
             _freeIndexes.Enqueue(index);
             Count--;
         }
 
-        public bool Contains(int index)
+        internal bool Contains(int index)
         {
             return index >= 0 && index < Capacity &&
                    index < _nextItemIndex && _freeIndexes.Contains(index) == false;

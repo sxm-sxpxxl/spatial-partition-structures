@@ -3,14 +3,11 @@ using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    internal sealed partial class SpatialTree<TObject, TBounds, TVector> : ISpatialTree<TObject, TBounds, TVector>
-        where TObject : class
-        where TBounds : IAABB<TVector>
-        where TVector : struct
+    internal sealed partial class SpatialTree<TObject, TBounds, TVector>
     {
         internal void TraverseFrom(int nodeIndex, Func<TraverseData<TBounds, TVector>, ExecutionSignal> eachNodeAction, bool needTraverseForStartNode = true)
         {
-            Assert.IsTrue(nodeIndex >= 0 && nodeIndex < _nodes.Capacity);
+            Assert.IsTrue(_nodes.Contains(nodeIndex));
             Assert.IsNotNull(eachNodeAction);
             
             if (_nodes[nodeIndex].isLeaf)
@@ -96,6 +93,8 @@ namespace SpatialPartitionSystem.Core.Series
 
         internal int GetEqualNodeIndexFrom(int nodeIndex, TBounds equalBounds)
         {
+            Assert.IsTrue(_nodes.Contains(nodeIndex));
+            
             _cachedEqualNodeIndex = Null;
             _cachedEqualBounds = equalBounds;
             
@@ -115,6 +114,10 @@ namespace SpatialPartitionSystem.Core.Series
         
         private void ClearBranchIndexes(int fromIndex, int toIndex)
         {
+            Assert.IsTrue(fromIndex >= 0 && fromIndex < _branchIndexes.Length);
+            Assert.IsTrue(toIndex >= 0 && toIndex < _branchIndexes.Length);
+            Assert.IsTrue(fromIndex < toIndex);
+            
             for (int i = fromIndex; i < toIndex && _branchIndexes[i] != Null; i++)
             {
                 _branchIndexes[i] = Null;

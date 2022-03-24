@@ -25,7 +25,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
         #if SKIP
         private SkipQuadtree<Transform> _tree;
         #else
-        private CompressedQuadtree<Transform> _tree;
+        private Quadtree<Transform> _tree;
         #endif
 
         private readonly Dictionary<Bounds2DObject, int> treeNodesMap = new Dictionary<Bounds2DObject, int>(capacity: 100);
@@ -75,7 +75,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
             #if SKIP
             _tree = new SkipQuadtree<Transform>(MAX_TREE_LEVEL, GetComponent<Bounds2DObject>().Bounds, maxLeafObjects, maxDepth, _objects.Capacity);
             #else
-            _tree = new CompressedQuadtree<Transform>(GetComponent<Bounds2DObject>().Bounds, maxLeafObjects, maxDepth, _objects.Capacity);
+            _tree = new Quadtree<Transform>(GetComponent<Bounds2DObject>().Bounds, maxLeafObjects, maxDepth, _objects.Capacity);
             #endif
         }
 

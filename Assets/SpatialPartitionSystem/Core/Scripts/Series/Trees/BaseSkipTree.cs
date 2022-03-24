@@ -4,8 +4,8 @@ using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core.Series.Trees
 {
-    public class BaseSkipTree<TObject, TBounds, TVector> : 
-        ISpatialTree<TObject, TBounds, TVector>, IApproximateQueryable<TObject, TBounds, TVector>
+    public class BaseSkipTree<TObject, TBounds, TVector>
+        : ISpatialTree<TObject, TBounds, TVector>, IApproximateQueryable<TObject, TBounds, TVector>
         where TObject : class
         where TBounds : IAABB<TVector>
         where TVector : struct
@@ -49,6 +49,11 @@ namespace SpatialPartitionSystem.Core.Series.Trees
         
         public BaseSkipTree(int levelsQuantity, Dimension dimension, TBounds bounds, int maxLeafObjects, int maxDepth, int initialObjectsCapacity)
         {
+            Assert.IsTrue(levelsQuantity > 0);
+            Assert.IsTrue(maxLeafObjects > 0);
+            Assert.IsTrue(maxDepth > 0);
+            Assert.IsTrue(initialObjectsCapacity > 0);
+            
             _levelTrees = new BaseCompressedTree<TObject, TBounds, TVector>[Mathf.Min(levelsQuantity, MaxPossibleLevelsQuantity)];
             _nodeCopyPointersByLevel = new Dictionary<int, NodeCopyPointer>[_levelTrees.Length];
             _levelTreesObjectIndexes = new Dictionary<TObject, int[]>(initialObjectsCapacity);
@@ -71,19 +76,23 @@ namespace SpatialPartitionSystem.Core.Series.Trees
 
         public void DebugDraw(Transform relativeTransform, bool isPlaymodeOnly = false)
         {
-            DebugDrawTreeLevel(treeLevel: 0, relativeTransform, isPlaymodeOnly);
+            DebugDrawTreeLevel(0, relativeTransform, isPlaymodeOnly);
         }
         
         public void DebugDrawTreeLevel(int treeLevel, Transform relativeTransform, bool isPlaymodeOnly = false)
         {
             Assert.IsNotNull(relativeTransform);
+
+            Gizmos.color = new Color(0f, 1f, 0f, 0.1f);
+            Gizmos.DrawCube(_extendedBounds.TransformCenter(relativeTransform), _extendedBounds.TransformSize(relativeTransform));
+            
             _levelTrees[treeLevel].DebugDraw(relativeTransform, isPlaymodeOnly);
         }
 
         public IReadOnlyList<TObject> GetObjectsByLevel(int treeLevel)
         {
             Assert.IsTrue(treeLevel >= 0 && treeLevel < _levelTrees.Length);
-            var objectsByLevel = new List<TObject>(capacity: 10);
+            var objectsByLevel = new List<TObject>(capacity: _levelTreesObjectIndexes.Count);
             
             foreach (var indexesByLevel in _levelTreesObjectIndexes.Values)
             {
@@ -133,9 +142,10 @@ namespace SpatialPartitionSystem.Core.Series.Trees
         public void Remove(int objectIndex)
         {
             Assert.IsTrue(_levelTrees[0].ContainsObjectWith(objectIndex));
-            TObject obj = _levelTrees[0].GetNodeObjectBy(objectIndex).target;
             
+            TObject obj = _levelTrees[0].GetNodeObjectBy(objectIndex).target;
             int[] objectIndexesByLevel = _levelTreesObjectIndexes[obj];
+            
             for (int i = 0; i < objectIndexesByLevel.Length; i++)
             {
                 if (objectIndexesByLevel[i] == Null)
@@ -162,8 +172,8 @@ namespace SpatialPartitionSystem.Core.Series.Trees
         public int Update(int objectIndex, TBounds updatedObjBounds)
         {
             Assert.IsTrue(_levelTrees[0].ContainsObjectWith(objectIndex));
-            TObject obj = _levelTrees[0].GetNodeObjectBy(objectIndex).target;
             
+            TObject obj = _levelTrees[0].GetNodeObjectBy(objectIndex).target;
             int actualObjectIndex = _levelTrees[0].Update(objectIndex, updatedObjBounds);
             _levelTreesObjectIndexes[obj][0] = actualObjectIndex;
             
@@ -188,7 +198,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
             _queryBounds = queryBounds;
             _currentExtendedEpsilon = epsilon;
             _extendedBounds = (TBounds) queryBounds.GetExtendedBoundsOn(_currentExtendedEpsilon);
-            
+
             _queryCriticalChildrenIndexes.Enqueue(SpatialTree<TObject, AABB2D, Vector2>.RootIndex);
 
             int nodeIndex;
@@ -210,7 +220,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
                     continue;
                 }
                 
-                if (queryBounds.Contains(node.bounds))
+                if (_extendedBounds.Contains(node.bounds))
                 {
                     _levelTrees[0].DeepAddNodeObjects(nodeIndex, _queryObjects);
                     continue;
@@ -241,13 +251,13 @@ namespace SpatialPartitionSystem.Core.Series.Trees
             {
                 if (IsCriticalNodeOn(notCriticalNodeIndex, maxTreeLevel) == false)
                 {
-                    int childIndexEqualTo = GetChildIndexEqualTo(maxTreeLevel, notCriticalNodeIndex);
+                    int childIndexEqualTo = GetChildIndexEqualTo(notCriticalNodeIndex, maxTreeLevel);
                             
                     if (_levelTrees[maxTreeLevel].GetNodeBy(childIndexEqualTo).isLeaf == false || maxTreeLevel == 0)
                     {
                         notCriticalNodeIndex = childIndexEqualTo;
                     }
-                    else if (maxTreeLevel != 0)
+                    else
                     {
                         FindNodeCopyIndex(notCriticalNodeIndex, maxTreeLevel, maxTreeLevel - 1, out notCriticalNodeIndex);
                         maxTreeLevel--;
@@ -319,7 +329,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
             return true;
         }
 
-        private int GetChildIndexEqualTo(int treeLevel, int branchIndex)
+        private int GetChildIndexEqualTo(int branchIndex, int treeLevel)
         {
             Assert.IsTrue(treeLevel >= 0 && treeLevel < _levelTrees.Length);
             Assert.IsTrue(_levelTrees[treeLevel].ContainsNodeWith(branchIndex));

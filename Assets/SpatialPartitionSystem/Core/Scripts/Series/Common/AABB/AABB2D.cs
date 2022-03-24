@@ -1,5 +1,4 @@
 ﻿using System;
-using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Assertions;
 
@@ -90,16 +89,13 @@ namespace SpatialPartitionSystem.Core.Series
 
         public bool Equals(IAABB<Vector2> other)
         {
+            Assert.IsNotNull(other);
             return MathUtility.IsApproximateEqual(center, other.Center) && MathUtility.IsApproximateEqual(extents, other.Extents);
         }
 
         public override bool Equals(object obj) => obj is AABB2D other && Equals(other);
         
         public override int GetHashCode() => unchecked (center.GetHashCode() * 397) ^ extents.GetHashCode();
-        
-        public static bool operator ==(AABB2D a, AABB2D b) => a.Equals(b);
-        
-        public static bool operator !=(AABB2D a, AABB2D b) => !a.Equals(b);
 
         private static bool Contains(Vector2 point, Vector2 min, Vector2 max)
         {

@@ -3,51 +3,23 @@ using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    internal sealed partial class SpatialTree<TObject, TBounds, TVector> : ISpatialTree<TObject, TBounds, TVector>
-        where TObject : class
-        where TBounds : IAABB<TVector>
-        where TVector : struct
+    internal sealed partial class SpatialTree<TObject, TBounds, TVector>
     {
-        private struct MissingObjectData
-        {
-            public bool isMissing;
-            public NodeObject<TObject, TBounds, TVector> nodeObject;
+        public int Update(int objectIndex, TBounds updatedObjBounds) => Update(objectIndex, updatedObjBounds, AddObjectToLeaf);
 
-            public void Set(NodeObject<TObject, TBounds, TVector> value)
-            {
-                isMissing = true;
-                nodeObject = value;
-            }
-
-            public void Reset()
-            {
-                isMissing = false;
-                nodeObject = default;
-            }
-        }
-        
-        public int Update(int objectIndex, TBounds updatedObjBounds)
+        internal int Update(int objectIndex, TBounds updatedObjBounds, Func<int, TObject, TBounds, int> addObjectAction)
         {
-            return Update(objectIndex, updatedObjBounds, AddObjectToLeaf);
-        }
-
-        public int Update(int objectIndex, TBounds updatedObjBounds, Func<int, TObject, TBounds, int> addObjectAction)
-        {
-            int newObjectIndex;
+            Assert.IsTrue(_objects.Contains(objectIndex));
+            Assert.IsNotNull(addObjectAction);
             
             if (IsObjectMissing(objectIndex))
             {
-                if (TryAdd(_missingObjects[objectIndex].nodeObject.target, updatedObjBounds, addObjectAction, out newObjectIndex) == false)
-                {
-                    return objectIndex;
-                }
-                
-                _missingObjects[objectIndex].Reset();
-                return newObjectIndex;
+                return ReaddObject(objectIndex, updatedObjBounds, addObjectAction);
             }
             
             int linkedLeafIndex = _objects[objectIndex].leafIndex;
             Assert.IsTrue(linkedLeafIndex >= 0 && linkedLeafIndex < _nodes.Capacity);
+            Assert.IsTrue(_nodes[linkedLeafIndex].isLeaf);
 
             if (_nodes[linkedLeafIndex].bounds.Intersects(updatedObjBounds))
             {
@@ -58,30 +30,39 @@ namespace SpatialPartitionSystem.Core.Series
                 return objectIndex;
             }
 
-            var removedNodeObject = _objects[objectIndex];
-            Remove(objectIndex);
+            return ReaddObject(objectIndex, updatedObjBounds, addObjectAction);
+        }
 
-            if (TryAdd(removedNodeObject.target, updatedObjBounds, addObjectAction, out newObjectIndex) == false)
+        private int ReaddObject(int objectIndex, TBounds updatedObjBounds, Func<int, TObject, TBounds, int> addObjectAction)
+        {
+            Assert.IsTrue(_objects.Contains(objectIndex));
+            Assert.IsNotNull(addObjectAction);
+            
+            var nodeObject = _objects[objectIndex];
+            
+            int targetNodeIndex = FindTargetNodeIndex(updatedObjBounds);
+            if (targetNodeIndex != Null)
             {
-                _missingObjects[objectIndex].Set(removedNodeObject);
-                return objectIndex;
+                Remove(objectIndex);
+                return addObjectAction.Invoke(targetNodeIndex, nodeObject.target, updatedObjBounds);
             }
 
-            return newObjectIndex;
+            _missingObjects[objectIndex] = true;
+            return objectIndex;
         }
         
         private bool IsObjectMissing(int objectIndex)
         {
-            Assert.IsTrue(objectIndex >= 0 && objectIndex < _objects.Capacity);
+            Assert.IsTrue(_objects.Contains(objectIndex));
 
             if (objectIndex >= _missingObjects.Length)
             {
-                var newArray = new MissingObjectData[_objects.Capacity];
+                var newArray = new bool[_objects.Capacity];
                 _missingObjects.CopyTo(newArray, 0);
                 _missingObjects = newArray;
             }
 
-            return _missingObjects[objectIndex].isMissing;
+            return _missingObjects[objectIndex];
         }
     }
 }

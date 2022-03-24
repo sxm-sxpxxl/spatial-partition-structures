@@ -1,18 +1,11 @@
 ﻿using System;
-using UnityEngine;
 using UnityEngine.Assertions;
 
 namespace SpatialPartitionSystem.Core.Series
 {
-    internal sealed partial class SpatialTree<TObject, TBounds, TVector> : ISpatialTree<TObject, TBounds, TVector>
-        where TObject : class
-        where TBounds : IAABB<TVector>
-        where TVector : struct
+    internal sealed partial class SpatialTree<TObject, TBounds, TVector>
     {
-        public bool TryAdd(TObject obj, TBounds objBounds, out int objectIndex)
-        {
-            return TryAdd(obj, objBounds, AddObjectToLeaf, out objectIndex);
-        }
+        public bool TryAdd(TObject obj, TBounds objBounds, out int objectIndex) => TryAdd(obj, objBounds, AddObjectToLeaf, out objectIndex);
 
         internal bool TryAdd(TObject obj, TBounds objBounds, Func<int, TObject, TBounds, int> addObjectAction, out int objectIndex)
         {
@@ -30,7 +23,7 @@ namespace SpatialPartitionSystem.Core.Series
             return true;
         }
         
-        public int AddObjectToLeaf(int leafIndex, TObject obj, TBounds objBounds)
+        internal int AddObjectToLeaf(int leafIndex, TObject obj, TBounds objBounds)
         {
             Assert.IsTrue(leafIndex >= 0 && leafIndex < _nodes.Capacity);
             Assert.IsTrue(_nodes[leafIndex].isLeaf);
@@ -48,8 +41,8 @@ namespace SpatialPartitionSystem.Core.Series
         
         internal void LinkChildrenNodesTo(int nodeIndex, int firstChildIndex)
         {
-            Assert.IsTrue(firstChildIndex >= 0 && firstChildIndex < _nodes.Capacity);
             Assert.IsTrue(nodeIndex >= 0 && nodeIndex < _nodes.Capacity);
+            Assert.IsTrue(firstChildIndex >= 0 && firstChildIndex < _nodes.Capacity);
 
             var node = _nodes[nodeIndex];
 
@@ -89,24 +82,6 @@ namespace SpatialPartitionSystem.Core.Series
             return childrenIndexes;
         }
 
-        internal int FindTargetNodeIndex(TBounds objBounds)
-        {
-            int targetNodeIndex = Null;
-
-            TraverseFromRoot(data =>
-            {
-                if (_nodes[data.nodeIndex].bounds.Intersects(objBounds))
-                {
-                    targetNodeIndex = data.nodeIndex;
-                    return ExecutionSignal.ContinueInDepth;
-                }
-
-                return ExecutionSignal.Continue;
-            });
-            
-            return targetNodeIndex;
-        }
-        
         private int CreateObjectFor(int leafIndex, TObject obj, TBounds objBounds)
         {
             Assert.IsTrue(leafIndex >= 0 && leafIndex < _nodes.Capacity);
@@ -162,9 +137,9 @@ namespace SpatialPartitionSystem.Core.Series
 
         private void LinkObjectPointerTo(int leafIndex, int objectPointerIndex)
         {
-            Assert.IsTrue(objectPointerIndex >= 0 && objectPointerIndex < _objectPointers.Capacity);
             Assert.IsTrue(leafIndex >= 0 && leafIndex < _nodes.Capacity);
             Assert.IsTrue(_nodes[leafIndex].isLeaf);
+            Assert.IsTrue(objectPointerIndex >= 0 && objectPointerIndex < _objectPointers.Capacity);
 
             int objectIndex = _objectPointers[objectPointerIndex].objectIndex;
             var obj = _objects[objectIndex];
@@ -237,6 +212,24 @@ namespace SpatialPartitionSystem.Core.Series
             _nodes[leafIndex] = node;
 
             return unlinkedObjects;
+        }
+        
+        private int FindTargetNodeIndex(TBounds objBounds)
+        {
+            int targetNodeIndex = Null;
+
+            TraverseFromRoot(data =>
+            {
+                if (data.node.bounds.Intersects(objBounds))
+                {
+                    targetNodeIndex = data.node.isLeaf ? data.nodeIndex : targetNodeIndex;
+                    return ExecutionSignal.ContinueInDepth;
+                }
+
+                return ExecutionSignal.Continue;
+            });
+            
+            return targetNodeIndex;
         }
         
         private int FindTargetNodeIndex(int[] nodeIndexes, TBounds objBounds)

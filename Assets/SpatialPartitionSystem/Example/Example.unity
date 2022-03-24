@@ -2259,8 +2259,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   treeLevel: 0
-  maxLeafObjects: 1
-  maxDepth: 8
+  maxLeafObjects: 16
+  maxDepth: 5
   queryBoundsObj: {fileID: 265401185}
 --- !u!114 &2039316871
 MonoBehaviour:
