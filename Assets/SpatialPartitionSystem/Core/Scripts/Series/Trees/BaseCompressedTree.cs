@@ -16,6 +16,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
         private readonly SpatialTree<TObject, TBounds, TVector> _tree;
 
         internal int NodesCapacity => _tree.NodesCapacity;
+        internal int MaxChildrenCount => _tree.MaxChildrenCount;
         
         private struct CompressData
         {

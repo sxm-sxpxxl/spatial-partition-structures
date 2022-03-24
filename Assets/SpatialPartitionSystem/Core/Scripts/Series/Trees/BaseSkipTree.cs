@@ -199,7 +199,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
             _currentExtendedEpsilon = epsilon;
             _extendedBounds = (TBounds) queryBounds.GetExtendedBoundsOn(_currentExtendedEpsilon);
 
-            _queryCriticalChildrenIndexes.Enqueue(SpatialTree<TObject, AABB2D, Vector2>.RootIndex);
+            _queryCriticalChildrenIndexes.Enqueue(SpatialTree<TObject, TBounds, TVector>.RootIndex);
 
             int nodeIndex;
             Node<TBounds, TVector> node;
@@ -233,7 +233,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
                     continue;
                 }
                 
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < _levelTrees[0].MaxChildrenCount; i++)
                 {
                     _queryCriticalChildrenIndexes.Enqueue(node.firstChildIndex + i);
                 }
@@ -489,7 +489,7 @@ namespace SpatialPartitionSystem.Core.Series.Trees
             }
 
             TBounds currentNodeCopyBounds = _levelTrees[currentLevelTreeIndex].GetNodeBy(nodeIndex).bounds;
-            currentParentIndex = currentParentIndex == Null ? SpatialTree<TObject, AABB2D, Vector2>.RootIndex : currentParentIndex;
+            currentParentIndex = currentParentIndex == Null ? SpatialTree<TObject, TBounds, TVector>.RootIndex : currentParentIndex;
             
             foundNodeCopyIndex = _levelTrees[requiredLevelTreeIndex].GetEqualNodeIndexFrom(currentParentIndex, currentNodeCopyBounds);
             return foundNodeCopyIndex != Null;

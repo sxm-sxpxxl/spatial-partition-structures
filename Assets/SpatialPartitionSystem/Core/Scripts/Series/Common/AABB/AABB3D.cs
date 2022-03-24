@@ -109,7 +109,7 @@ namespace SpatialPartitionSystem.Core.Series
             return MathUtility.IsApproximateEqual(center, other.Center) && MathUtility.IsApproximateEqual(extents, other.Extents);
         }
 
-        public override bool Equals(object obj) => obj is AABB2D other && Equals(other);
+        public override bool Equals(object obj) => obj is AABB3D other && Equals(other);
         
         public override int GetHashCode() => unchecked (center.GetHashCode() * 397) ^ extents.GetHashCode();
         

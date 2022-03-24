@@ -27,6 +27,7 @@ namespace SpatialPartitionSystem.Core.Series
         private readonly List<TObject> _queryObjects;
 
         internal int NodesCapacity => _nodes.Capacity;
+        internal int MaxChildrenCount => _maxChildrenCount;
 
         internal SpatialTree(Dimension dimension, TBounds rootBounds, int maxLeafObjects, int maxDepth, int initialObjectsCapacity)
         {
