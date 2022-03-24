@@ -46,23 +46,21 @@ namespace SpatialPartitionSystem.Core.Series
                 return;
             }
 
-            ObjectPointer currentPointer;
-            NodeObject<TObject, TBounds, TVector> nodeObject;
-            int currentPointerIndex = leaf.firstChildIndex;
+            NodeObject<TObject, TBounds, TVector> currentNodeObject;
+            int currentObjectIndex = leaf.firstChildIndex;
 
             do
             {
-                currentPointer = _objectPointers[currentPointerIndex];
-                nodeObject = _objects[currentPointer.objectIndex];
+                currentNodeObject = _objects[currentObjectIndex];
 
-                if (request.needIntersectionCheck == false || request.queryBounds.Intersects(nodeObject.bounds))
+                if (request.needIntersectionCheck == false || request.queryBounds.Intersects(currentNodeObject.bounds))
                 {
-                    objects.Add(nodeObject.target);
+                    objects.Add(currentNodeObject.target);
                 }
                 
-                currentPointerIndex = currentPointer.nextObjectPointerIndex;
+                currentObjectIndex = currentNodeObject.nextObjectIndex;
             }
-            while (currentPointer.nextObjectPointerIndex != Null);
+            while (currentNodeObject.nextObjectIndex != Null);
         }
 
         internal void DeepAddNodeObjects(int nodeIndex, ICollection<TObject> objects)

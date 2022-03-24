@@ -100,7 +100,7 @@ namespace SpatialPartitionSystem.Core.Series
 
             for (int i = 0; i < childrenUnlinkedPointerIndexes.Length; i++)
             {
-                LinkObjectPointerTo(parentBranchIndex, childrenUnlinkedPointerIndexes[i]);
+                LinkObjectTo(parentBranchIndex, childrenUnlinkedPointerIndexes[i]);
             }
         }
     }

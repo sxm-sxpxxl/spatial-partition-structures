@@ -19,13 +19,11 @@ namespace SpatialPartitionSystem.Core.Series
         private static List<int> _cachedLeafIndexes = new List<int>(capacity: 1000);
         
         private readonly FreeList<Node<TBounds, TVector>> _nodes;
-        private readonly FreeList<ObjectPointer> _objectPointers;
         private readonly FreeList<NodeObject<TObject, TBounds, TVector>> _objects;
         
         private readonly int _maxLeafObjects, _maxDepth, _maxChildrenCount;
         
         private readonly int[] _branchIndexes;
-        private bool[] _missingObjects;
         private readonly List<TObject> _queryObjects;
 
         internal int NodesCapacity => _nodes.Capacity;
@@ -44,21 +42,11 @@ namespace SpatialPartitionSystem.Core.Series
             int maxBranchCount = maxNodesCount / _maxChildrenCount;
         
             _nodes = new FreeList<Node<TBounds, TVector>>(maxNodesCount);
-            _objectPointers = new FreeList<ObjectPointer>(initialObjectsCapacity);
             _objects = new FreeList<NodeObject<TObject, TBounds, TVector>>(initialObjectsCapacity);
             _branchIndexes = ArrayUtility.CreateArray(capacity: maxBranchCount, defaultValue: Null);
-            _missingObjects = new bool[initialObjectsCapacity];
             _queryObjects = new List<TObject>(capacity: initialObjectsCapacity);
             
-            _nodes.Add(new Node<TBounds, TVector>
-            {
-                parentIndex = Null,
-                firstChildIndex = Null,
-                objectsCount = 0,
-                isLeaf = true,
-                depth = 0,
-                bounds = rootBounds
-            }, out _);
+            _nodes.Add(new Node<TBounds, TVector>(depth: 0, bounds: rootBounds), out _);
         }
 
         internal bool ContainsNodeWith(int nodeIndex) => _nodes.Contains(nodeIndex);

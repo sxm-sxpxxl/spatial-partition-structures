@@ -8,11 +8,6 @@ namespace SpatialPartitionSystem.Core.Series
         {
             Assert.IsTrue(_objects.Contains(objectIndex));
 
-            if (IsObjectMissing(objectIndex))
-            {
-                _missingObjects[objectIndex] = false;
-            }
-            
             int linkedLeafIndex = _objects[objectIndex].leafIndex;
             Assert.IsTrue(linkedLeafIndex >= 0 && linkedLeafIndex < _nodes.Capacity);
             Assert.IsTrue(_nodes[linkedLeafIndex].isLeaf);
@@ -21,23 +16,21 @@ namespace SpatialPartitionSystem.Core.Series
 
             for (int i = 0; i < unlinkedPointersIndexes.Length; i++)
             {
-                if (_objectPointers[unlinkedPointersIndexes[i]].objectIndex == objectIndex)
+                if (unlinkedPointersIndexes[i] == objectIndex)
                 {
                     DeleteObject(unlinkedPointersIndexes[i]);
                 }
                 else
                 {
-                    LinkObjectPointerTo(linkedLeafIndex, unlinkedPointersIndexes[i]);
+                    LinkObjectTo(linkedLeafIndex, unlinkedPointersIndexes[i]);
                 }
             }
         }
         
-        private void DeleteObject(int objectPointerIndex)
+        private void DeleteObject(int objectIndex)
         {
-            Assert.IsTrue(_objectPointers.Contains(objectPointerIndex));
-            
-            _objects.RemoveAt(_objectPointers[objectPointerIndex].objectIndex);
-            _objectPointers.RemoveAt(objectPointerIndex);
+            Assert.IsTrue(_objects.Contains(objectIndex));
+            _objects.RemoveAt(objectIndex);
         }
     }
 }

@@ -39,23 +39,23 @@ namespace SpatialPartitionSystem.Core.Series
             }
         }
         
-        internal void LinkChildrenNodesTo(int nodeIndex, int firstChildIndex)
+        internal void LinkChildrenNodesTo(int nodeIndex, int firstChildNodeIndex)
         {
             Assert.IsTrue(nodeIndex >= 0 && nodeIndex < _nodes.Capacity);
-            Assert.IsTrue(firstChildIndex >= 0 && firstChildIndex < _nodes.Capacity);
+            Assert.IsTrue(firstChildNodeIndex >= 0 && firstChildNodeIndex < _nodes.Capacity);
 
             var node = _nodes[nodeIndex];
 
             node.isLeaf = false;
-            node.firstChildIndex = firstChildIndex;
+            node.firstChildIndex = firstChildNodeIndex;
 
             _nodes[nodeIndex] = node;
             
             for (int i = 0; i < _maxChildrenCount; i++)
             {
-                node = _nodes[firstChildIndex + i];
+                node = _nodes[firstChildNodeIndex + i];
                 node.parentIndex = nodeIndex;
-                _nodes[firstChildIndex + i] = node;
+                _nodes[firstChildNodeIndex + i] = node;
             }
         }
         
@@ -68,15 +68,10 @@ namespace SpatialPartitionSystem.Core.Series
             
             for (int i = 0; i < _maxChildrenCount; i++)
             {
-                _nodes.Add(new Node<TBounds, TVector>
-                {
-                    parentIndex = Null,
-                    firstChildIndex = Null,
-                    objectsCount = 0,
-                    isLeaf = true,
-                    depth = (byte) (_nodes[nodeIndex].depth + 1),
-                    bounds = (TBounds) parentBounds.GetChildBoundsBy((SplitSection) i)
-                }, out childrenIndexes[i]);
+                _nodes.Add(new Node<TBounds, TVector>(
+                    depth: (byte) (_nodes[nodeIndex].depth + 1),
+                    bounds: (TBounds) parentBounds.GetChildBoundsBy((SplitSection) i)
+                ), out childrenIndexes[i]);
             }
 
             return childrenIndexes;
@@ -88,21 +83,13 @@ namespace SpatialPartitionSystem.Core.Series
             Assert.IsTrue(_nodes[leafIndex].isLeaf);
             Assert.IsNotNull(obj);
             
-            _objects.Add(new NodeObject<TObject, TBounds, TVector>
-            {
-                leafIndex = leafIndex,
-                target = obj,
-                bounds = objBounds
-            }, out int newObjectIndex);
-            
-            _objectPointers.Add(new ObjectPointer
-            {
-                objectIndex = newObjectIndex,
-                nextObjectPointerIndex = Null
-            }, out int newObjectPointerIndex);
+            _objects.Add(new NodeObject<TObject, TBounds, TVector>(
+                leafIndex: leafIndex,
+                target: obj,
+                bounds: objBounds
+            ), out int newObjectIndex);
 
-            LinkObjectPointerTo(leafIndex, newObjectPointerIndex);
-            
+            LinkObjectTo(leafIndex, newObjectIndex);
             return newObjectIndex;
         }
         
@@ -115,15 +102,14 @@ namespace SpatialPartitionSystem.Core.Series
             int[] childrenIndexes = Split(leafIndex);
 
             int[] unlinkedPointersIndexes = UnlinkObjectPointersFrom(leafIndex);
-            int unlinkedObjectIndex, targetChildIndex;
+            int targetChildIndex;
 
             for (int i = 0; i < unlinkedPointersIndexes.Length; i++)
             {
-                unlinkedObjectIndex = _objectPointers[unlinkedPointersIndexes[i]].objectIndex;
-                targetChildIndex = FindTargetNodeIndex(childrenIndexes, _objects[unlinkedObjectIndex].bounds);
-
+                targetChildIndex = FindTargetNodeIndex(childrenIndexes, _objects[unlinkedPointersIndexes[i]].bounds);
+                
                 Assert.IsTrue(targetChildIndex != Null);
-                LinkObjectPointerTo(targetChildIndex, unlinkedPointersIndexes[i]);
+                LinkObjectTo(targetChildIndex, unlinkedPointersIndexes[i]);
             }
 
             targetChildIndex = FindTargetNodeIndex(childrenIndexes, objBounds);
@@ -135,15 +121,13 @@ namespace SpatialPartitionSystem.Core.Series
             return objectIndex;
         }
 
-        private void LinkObjectPointerTo(int leafIndex, int objectPointerIndex)
+        private void LinkObjectTo(int leafIndex, int objectIndex)
         {
-            Assert.IsTrue(leafIndex >= 0 && leafIndex < _nodes.Capacity);
+            Assert.IsTrue(_nodes.Contains(leafIndex));
             Assert.IsTrue(_nodes[leafIndex].isLeaf);
-            Assert.IsTrue(objectPointerIndex >= 0 && objectPointerIndex < _objectPointers.Capacity);
+            Assert.IsTrue(objectIndex >= 0 && objectIndex < _objects.Capacity);
 
-            int objectIndex = _objectPointers[objectPointerIndex].objectIndex;
             var obj = _objects[objectIndex];
-            
             obj.leafIndex = leafIndex;
             _objects[objectIndex] = obj;
             
@@ -151,24 +135,24 @@ namespace SpatialPartitionSystem.Core.Series
 
             if (node.objectsCount == 0)
             {
-                node.firstChildIndex = objectPointerIndex;
+                node.firstChildIndex = objectIndex;
                 node.objectsCount++;
                 
                 _nodes[leafIndex] = node;
                 return;
             }
 
-            int currentPointerIndex = node.firstChildIndex;
-            ObjectPointer currentPointer = _objectPointers[currentPointerIndex];
+            int currentObjectIndex = node.firstChildIndex;
+            var currentNodeObject = _objects[currentObjectIndex];
 
-            while (currentPointer.nextObjectPointerIndex != Null)
+            while (currentNodeObject.nextObjectIndex != Null)
             {
-                currentPointerIndex = currentPointer.nextObjectPointerIndex;
-                currentPointer = _objectPointers[currentPointerIndex];
+                currentObjectIndex = currentNodeObject.nextObjectIndex;
+                currentNodeObject = _objects[currentObjectIndex];
             }
 
-            currentPointer.nextObjectPointerIndex = objectPointerIndex;
-            _objectPointers[currentPointerIndex] = currentPointer;
+            currentNodeObject.nextObjectIndex = objectIndex;
+            _objects[currentObjectIndex] = currentNodeObject;
 
             node.objectsCount++;
             _nodes[leafIndex] = node;
@@ -176,7 +160,7 @@ namespace SpatialPartitionSystem.Core.Series
         
         private int[] UnlinkObjectPointersFrom(int leafIndex)
         {
-            Assert.IsTrue(leafIndex >= 0 && leafIndex < _nodes.Capacity);
+            Assert.IsTrue(_nodes.Contains(leafIndex));
             Assert.IsTrue(_nodes[leafIndex].isLeaf);
 
             var node = _nodes[leafIndex];
@@ -189,22 +173,22 @@ namespace SpatialPartitionSystem.Core.Series
             int[] unlinkedObjects = new int[node.objectsCount];
             int unlinkedObjectsIndex = 0;
 
-            int currentPointerIndex = node.firstChildIndex;
-            ObjectPointer currentPointer = _objectPointers[currentPointerIndex];
+            int currentObjectIndex = node.firstChildIndex;
+            var currentNodeObject = _objects[currentObjectIndex];
 
-            unlinkedObjects[unlinkedObjectsIndex++] = currentPointerIndex;
+            unlinkedObjects[unlinkedObjectsIndex++] = currentObjectIndex;
 
-            while (currentPointer.nextObjectPointerIndex != Null)
+            while (currentNodeObject.nextObjectIndex != Null)
             {
-                int nextObjectPointerIndex = currentPointer.nextObjectPointerIndex;
+                int nextObjectPointerIndex = currentNodeObject.nextObjectIndex;
 
-                currentPointer.nextObjectPointerIndex = Null;
-                _objectPointers[currentPointerIndex] = currentPointer;
+                currentNodeObject.nextObjectIndex = Null;
+                _objects[currentObjectIndex] = currentNodeObject;
 
-                currentPointerIndex = nextObjectPointerIndex;
-                currentPointer = _objectPointers[currentPointerIndex];
+                currentObjectIndex = nextObjectPointerIndex;
+                currentNodeObject = _objects[currentObjectIndex];
                 
-                unlinkedObjects[unlinkedObjectsIndex++] = currentPointerIndex;
+                unlinkedObjects[unlinkedObjectsIndex++] = currentObjectIndex;
             }
 
             node.firstChildIndex = Null;

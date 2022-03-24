@@ -12,7 +12,7 @@ namespace SpatialPartitionSystem.Core.Series
             Assert.IsTrue(_objects.Contains(objectIndex));
             Assert.IsNotNull(addObjectAction);
             
-            if (IsObjectMissing(objectIndex))
+            if (_objects[objectIndex].isMissing)
             {
                 return ReaddObject(objectIndex, updatedObjBounds, addObjectAction);
             }
@@ -47,22 +47,10 @@ namespace SpatialPartitionSystem.Core.Series
                 return addObjectAction.Invoke(targetNodeIndex, nodeObject.target, updatedObjBounds);
             }
 
-            _missingObjects[objectIndex] = true;
+            nodeObject.isMissing = true;
+            _objects[objectIndex] = nodeObject;
+            
             return objectIndex;
-        }
-        
-        private bool IsObjectMissing(int objectIndex)
-        {
-            Assert.IsTrue(_objects.Contains(objectIndex));
-
-            if (objectIndex >= _missingObjects.Length)
-            {
-                var newArray = new bool[_objects.Capacity];
-                _missingObjects.CopyTo(newArray, 0);
-                _missingObjects = newArray;
-            }
-
-            return _missingObjects[objectIndex];
         }
     }
 }
