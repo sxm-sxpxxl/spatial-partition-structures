@@ -48,16 +48,22 @@ namespace SpatialPartitionSystem.Core.Series.Trees
             Assert.IsTrue(maxLeafObjects > 0);
             Assert.IsTrue(maxDepth > 0);
             Assert.IsTrue(initialObjectsCapacity > 0);
-            _tree = new SpatialTree<TObject, TBounds, TVector>(dimension, rootBounds, maxLeafObjects, maxDepth, initialObjectsCapacity);
+            _tree = new SpatialTree<TObject, TBounds, TVector>(
+                dimension,
+                rootBounds,
+                maxLeafObjects,
+                maxDepth,
+                initialObjectsCapacity
+            ).Override(addObjectAction: AddToCompressedNode);
         }
 
         public void DebugDraw(Transform relativeTransform, bool isPlaymodeOnly = false) => _tree.DebugDraw(relativeTransform, isPlaymodeOnly);
 
-        public bool TryAdd(TObject obj, TBounds objBounds, out int objectIndex) => _tree.TryAdd(obj, objBounds, AddToCompressedNode, out objectIndex);
+        public bool TryAdd(TObject obj, TBounds objBounds, out int objectIndex) => _tree.TryAdd(obj, objBounds, out objectIndex);
 
         public void Remove(int objectIndex) => _tree.Remove(objectIndex);
-
-        public int Update(int objectIndex, TBounds updatedObjBounds) => _tree.Update(objectIndex, updatedObjBounds, AddToCompressedNode);
+        
+        public int Update(int objectIndex, TBounds updatedObjBounds) => _tree.Update(objectIndex, updatedObjBounds);
 
         public void CleanUp()
         {

@@ -5,16 +5,13 @@ namespace SpatialPartitionSystem.Core.Series
 {
     internal sealed partial class SpatialTree<TObject, TBounds, TVector>
     {
-        public int Update(int objectIndex, TBounds updatedObjBounds) => Update(objectIndex, updatedObjBounds, AddObjectToLeaf);
-
-        internal int Update(int objectIndex, TBounds updatedObjBounds, Func<int, TObject, TBounds, int> addObjectAction)
+        public int Update(int objectIndex, TBounds updatedObjBounds)
         {
             Assert.IsTrue(_objects.Contains(objectIndex));
-            Assert.IsNotNull(addObjectAction);
             
             if (_objects[objectIndex].isMissing)
             {
-                return ReaddObject(objectIndex, updatedObjBounds, addObjectAction);
+                return ReaddObject(objectIndex, updatedObjBounds);
             }
             
             int linkedLeafIndex = _objects[objectIndex].leafIndex;
@@ -30,21 +27,20 @@ namespace SpatialPartitionSystem.Core.Series
                 return objectIndex;
             }
 
-            return ReaddObject(objectIndex, updatedObjBounds, addObjectAction);
+            return ReaddObject(objectIndex, updatedObjBounds);
         }
 
-        private int ReaddObject(int objectIndex, TBounds updatedObjBounds, Func<int, TObject, TBounds, int> addObjectAction)
+        private int ReaddObject(int objectIndex, TBounds updatedObjBounds)
         {
             Assert.IsTrue(_objects.Contains(objectIndex));
-            Assert.IsNotNull(addObjectAction);
-            
+
             var nodeObject = _objects[objectIndex];
             
             int targetNodeIndex = FindTargetNodeIndex(updatedObjBounds);
             if (targetNodeIndex != Null)
             {
                 Remove(objectIndex);
-                return addObjectAction.Invoke(targetNodeIndex, nodeObject.target, updatedObjBounds);
+                return _cachedAddObjectAction.Invoke(targetNodeIndex, nodeObject.target, updatedObjBounds);
             }
 
             nodeObject.isMissing = true;

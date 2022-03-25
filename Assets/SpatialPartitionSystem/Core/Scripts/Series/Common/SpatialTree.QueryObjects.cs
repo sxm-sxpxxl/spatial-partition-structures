@@ -14,21 +14,27 @@ namespace SpatialPartitionSystem.Core.Series
         public IReadOnlyList<TObject> Query(TBounds queryBounds)
         {
             _queryObjects.Clear();
+            _tempIndexes.Clear();
+            _tempBounds = queryBounds;
 
             TraverseFromRoot(data =>
             {
-                if (_nodes[data.nodeIndex].isLeaf == false || queryBounds.Intersects(_nodes[data.nodeIndex].bounds) == false)
+                if (data.node.isLeaf && _tempBounds.Intersects(data.node.bounds))
                 {
-                    return ExecutionSignal.Continue;
+                    _tempIndexes.Add(data.nodeIndex);
                 }
 
-                AddLeafObjects(data.nodeIndex, _queryObjects, new AddObjectRequest
-                {
-                    queryBounds = queryBounds,
-                    needIntersectionCheck = true
-                });
                 return ExecutionSignal.Continue;
             });
+            
+            for (int i = 0; i < _tempIndexes.Count; i++)
+            {
+                AddLeafObjects(_tempIndexes[i], _queryObjects, new AddObjectRequest
+                {
+                    queryBounds = _tempBounds,
+                    needIntersectionCheck = true
+                });
+            }
 
             return _queryObjects;
         }
@@ -68,6 +74,8 @@ namespace SpatialPartitionSystem.Core.Series
             Assert.IsTrue(_nodes.Contains(nodeIndex));
             Assert.IsNotNull(objects);
             
+            _tempIndexes.Clear();
+            
             if (_nodes[nodeIndex].isLeaf)
             {
                 AddLeafObjects(nodeIndex, objects, new AddObjectRequest { needIntersectionCheck = false });
@@ -78,17 +86,15 @@ namespace SpatialPartitionSystem.Core.Series
             {
                 if (data.node.isLeaf)
                 {
-                    _cachedLeafIndexes.Add(data.nodeIndex);
+                    _tempIndexes.Add(data.nodeIndex);
                 }
                 return ExecutionSignal.Continue;
             }, needTraverseForStartNode: false);
             
-            for (int i = 0; i < _cachedLeafIndexes.Count; i++)
+            for (int i = 0; i < _tempIndexes.Count; i++)
             {
-                AddLeafObjects(_cachedLeafIndexes[i], objects, new AddObjectRequest { needIntersectionCheck = false });
+                AddLeafObjects(_tempIndexes[i], objects, new AddObjectRequest { needIntersectionCheck = false });
             }
-            
-            _cachedLeafIndexes.Clear();
         }
     }
 }

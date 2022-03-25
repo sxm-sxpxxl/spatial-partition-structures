@@ -26,7 +26,7 @@ namespace SpatialPartitionSystem.Core.Series
 
         public bool Contains(Vector3 point) => Contains(point, Min, Max);
 
-        public bool Contains(IAABB<Vector3> other)
+        public bool Contains<TBounds>(TBounds other) where TBounds : IAABB<Vector3>
         {
             Vector3 min = Min, max = Max, otherCenter = other.Center, otherExtents = other.Extents;
             return Contains(otherCenter + new Vector3(-otherExtents.x, -otherExtents.y, otherExtents.z), min, max) &&
@@ -39,7 +39,7 @@ namespace SpatialPartitionSystem.Core.Series
                    Contains(otherCenter + new Vector3(-otherExtents.x, otherExtents.y, -otherExtents.z), min, max);
         }
 
-        public bool Intersects(IAABB<Vector3> other)
+        public bool Intersects<TBounds>(TBounds other) where TBounds : IAABB<Vector3>
         {
             Vector3 otherCenter = other.Center, otherExtents = other.Extents;
             return MathUtility.IsLessOrEqual(Mathf.Abs(center.x - otherCenter.x), extents.x + otherExtents.x) &&
@@ -47,7 +47,7 @@ namespace SpatialPartitionSystem.Core.Series
                    MathUtility.IsLessOrEqual(Mathf.Abs(center.z - otherCenter.z), extents.z + otherExtents.z);
         }
 
-        public float IntersectionArea(IAABB<Vector3> other)
+        public float IntersectionArea<TBounds>(TBounds other) where TBounds : IAABB<Vector3>
         {
             Vector3 otherCenter = other.Center, otherExtents = other.Extents;
             float areaWidth = (extents.x + otherExtents.x) - Mathf.Abs(center.x - otherCenter.x);
@@ -103,9 +103,8 @@ namespace SpatialPartitionSystem.Core.Series
 
         public Vector3 TransformSize(Transform relativeTransform) => relativeTransform.TransformDirection(Size);
 
-        public bool Equals(IAABB<Vector3> other)
+        public bool Equals<TBounds>(TBounds other) where TBounds : IAABB<Vector3>
         {
-            Assert.IsNotNull(other);
             return MathUtility.IsApproximateEqual(center, other.Center) && MathUtility.IsApproximateEqual(extents, other.Extents);
         }
 

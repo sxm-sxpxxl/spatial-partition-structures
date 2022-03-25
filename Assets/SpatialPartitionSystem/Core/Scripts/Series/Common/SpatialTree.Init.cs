@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using Codice.CM.Common.Replication;
 using UnityEngine;
 using UnityEngine.Assertions;
 
@@ -13,10 +15,12 @@ namespace SpatialPartitionSystem.Core.Series
         internal const int RootIndex = 0, Null = -1;
         
         private const int MaxPossibleDepth = 8, QuadtreeChildrenCount = 4, OctreeChildrenCount = 8;
-        
-        private static int _cachedEqualNodeIndex;
-        private static TBounds _cachedEqualBounds;
-        private static List<int> _cachedLeafIndexes = new List<int>(capacity: 1000);
+
+        private static int _tempEqualNodeIndex;
+        private static TBounds _tempBounds;
+        private static List<int> _tempIndexes = new List<int>(capacity: 1000);
+
+        private Func<int, TObject, TBounds, int> _cachedAddObjectAction;
         
         private readonly FreeList<Node<TBounds, TVector>> _nodes;
         private readonly FreeList<NodeObject<TObject, TBounds, TVector>> _objects;
@@ -48,6 +52,13 @@ namespace SpatialPartitionSystem.Core.Series
             _queryObjects = new List<TObject>(capacity: initialObjectsCapacity);
             
             _nodes.Add(new Node<TBounds, TVector>(depth: 0, bounds: rootBounds), out _);
+            _cachedAddObjectAction = AddObjectToLeaf;
+        }
+
+        internal SpatialTree<TObject, TBounds, TVector> Override(Func<int, TObject, TBounds, int> addObjectAction)
+        {
+            _cachedAddObjectAction = addObjectAction;
+            return this;
         }
 
         internal bool ContainsNodeWith(int nodeIndex) => _nodes.Contains(nodeIndex);

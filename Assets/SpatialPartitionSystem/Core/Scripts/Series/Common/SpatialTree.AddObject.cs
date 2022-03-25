@@ -5,12 +5,9 @@ namespace SpatialPartitionSystem.Core.Series
 {
     internal sealed partial class SpatialTree<TObject, TBounds, TVector>
     {
-        public bool TryAdd(TObject obj, TBounds objBounds, out int objectIndex) => TryAdd(obj, objBounds, AddObjectToLeaf, out objectIndex);
-
-        internal bool TryAdd(TObject obj, TBounds objBounds, Func<int, TObject, TBounds, int> addObjectAction, out int objectIndex)
+        public bool TryAdd(TObject obj, TBounds objBounds, out int objectIndex)
         {
             Assert.IsNotNull(obj);
-            Assert.IsNotNull(addObjectAction);
 
             int targetNodeIndex = FindTargetNodeIndex(objBounds);
             if (targetNodeIndex == Null)
@@ -19,7 +16,7 @@ namespace SpatialPartitionSystem.Core.Series
                 return false;
             }
 
-            objectIndex = addObjectAction.Invoke(targetNodeIndex, obj, objBounds);
+            objectIndex = _cachedAddObjectAction.Invoke(targetNodeIndex, obj, objBounds);
             return true;
         }
         

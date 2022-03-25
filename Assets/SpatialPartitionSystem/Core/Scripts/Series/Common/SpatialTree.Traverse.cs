@@ -95,21 +95,21 @@ namespace SpatialPartitionSystem.Core.Series
         {
             Assert.IsTrue(_nodes.Contains(nodeIndex));
             
-            _cachedEqualNodeIndex = Null;
-            _cachedEqualBounds = equalBounds;
+            _tempEqualNodeIndex = Null;
+            _tempBounds = equalBounds;
             
             TraverseFrom(nodeIndex, data =>
             {
-                if (data.node.bounds.Equals(_cachedEqualBounds))
+                if (data.node.bounds.Equals(_tempBounds))
                 {
-                    _cachedEqualNodeIndex = data.nodeIndex;
+                    _tempEqualNodeIndex = data.nodeIndex;
                     return ExecutionSignal.Stop;
                 }
 
                 return ExecutionSignal.Continue;
             });
             
-            return _cachedEqualNodeIndex;
+            return _tempEqualNodeIndex;
         }
         
         private void ClearBranchIndexes(int fromIndex, int toIndex)
