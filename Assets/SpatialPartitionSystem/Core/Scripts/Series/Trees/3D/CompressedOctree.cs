@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace SpatialPartitionSystem.Core.Series.Trees
+namespace SpatialPartitionSystem.Core.Series
 {
     public sealed class CompressedOctree<TObject> : BaseCompressedTree<TObject, AABB3D, Vector3> where TObject : class
     {

@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace SpatialPartitionSystem.Core.Series.Trees
+namespace SpatialPartitionSystem.Core.Series
 {
     public sealed class SkipOctree<TObject> : BaseSkipTree<TObject, AABB3D, Vector3> where TObject : class
     {

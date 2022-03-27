@@ -44,6 +44,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eac9a29939724de6833046cc2e003b95, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  isInnerBounds: 1
   boundsColor: {r: 0, g: 1, b: 0, a: 1}
   bounds:
     m_Center: {x: 0, y: 0, z: 0}

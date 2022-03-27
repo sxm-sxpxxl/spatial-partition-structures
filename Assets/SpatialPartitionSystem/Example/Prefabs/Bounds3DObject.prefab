@@ -125,7 +125,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dcddf40e040f4b6cbdc5ce9243b23a14, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  boundsColor: {r: 1, g: 1, b: 1, a: 1}
+  isInnerBounds: 1
+  boundsColor: {r: 0, g: 1, b: 0, a: 1}
   bounds:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0.05, y: 0.05, z: 0.05}

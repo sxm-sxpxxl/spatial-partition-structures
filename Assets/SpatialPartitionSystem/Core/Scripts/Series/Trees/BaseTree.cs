@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEngine.Assertions;
 
-namespace SpatialPartitionSystem.Core.Series.Trees
+namespace SpatialPartitionSystem.Core.Series
 {
     public class BaseTree<TObject, TBounds, TVector>
         : ISpatialTree<TObject, TBounds, TVector>, IQueryable<TObject, TBounds, TVector>

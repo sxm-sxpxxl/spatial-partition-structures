@@ -1,24 +1,30 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using SpatialPartitionSystem.Core.Series;
+
 using Random = UnityEngine.Random;
-using SpatialPartitionSystem.Core.OldSeries;
 
 namespace SpatialPartitionSystem.Example
 {
-    [DisallowMultipleComponent, RequireComponent(typeof(SpatialGameObject))]
+    [DisallowMultipleComponent, RequireComponent(typeof(BoundsAgent))]
     public sealed class ObjectMotioner : MonoBehaviour
     {
+        [SerializeField] private Dimension dimension = Dimension.Two;
+        
+        [Space]
         [Tooltip("Do you need to update the motion of the objects?")]
         [SerializeField] private bool isMotionUpdated = false;
         [Tooltip("The speed of the object motion (unit per second).")]
-        [SerializeField, Range(0.1f, 10f)] private float speed = 1f;
+        [SerializeField, Range(0.1f, 3f)] private float speed = 1f;
 
         [Space]
-        [SerializeField] private UnityEvent<SpatialGameObject> onObjectUpdated = new UnityEvent<SpatialGameObject>();
+        [SerializeField] private UnityEvent<BoundsAgent> onObjectUpdated = new UnityEvent<BoundsAgent>();
+        [SerializeField] private UnityEvent onAllObjectsUpdated = new UnityEvent();
         
-        private SpatialGameObject _rootSpatialObject;
+        private BoundsAgent _rootBounds;
         private readonly List<MobileObject> _objects = new List<MobileObject>(capacity: 100);
 
         private Vector3 InitialVelocity
@@ -27,7 +33,7 @@ namespace SpatialPartitionSystem.Example
             {
                 Vector3 direction = Random.onUnitSphere;
 
-                if (_rootSpatialObject is TwoDimensionalSpatialGameObject)
+                if (dimension == Dimension.Two)
                 {
                     direction.z = 0f;
                 }
@@ -39,12 +45,12 @@ namespace SpatialPartitionSystem.Example
         private class MobileObject
         {
             public Vector3 velocity;
-            public SpatialGameObject target;
+            public BoundsAgent target;
         }
         
         private void Awake()
         {
-            _rootSpatialObject = GetComponent<SpatialGameObject>();
+            _rootBounds = GetComponent<BoundsAgent>();
         }
 
         private void Update()
@@ -59,9 +65,11 @@ namespace SpatialPartitionSystem.Example
                 UpdatePositionFor(_objects[i]);
                 onObjectUpdated.Invoke(_objects[i].target);
             }
+            
+            onAllObjectsUpdated.Invoke();
         }
         
-        public void AddMobileObject(SpatialGameObject obj)
+        public void AddMobileObject(BoundsAgent obj)
         {
             _objects.Add(new MobileObject { target = obj, velocity = InitialVelocity });
         }
@@ -73,8 +81,8 @@ namespace SpatialPartitionSystem.Example
             
             var resultObjVelocity = obj.velocity;
 
-            Vector3 min = _rootSpatialObject.BoundsMin;
-            Vector3 max = _rootSpatialObject.BoundsMax;
+            Vector3 min = _rootBounds.Min;
+            Vector3 max = _rootBounds.Max;
             
             if (objPosition.x > max.x || objPosition.x < min.x)
             {
@@ -88,13 +96,13 @@ namespace SpatialPartitionSystem.Example
                 resultObjVelocity.y = -resultObjVelocity.y;
             }
 
-            if (_rootSpatialObject is ThreeDimensionalSpatialGameObject)
+            if (dimension == Dimension.Three)
             {
                 if (objPosition.z > max.z || objPosition.z < min.z)
                 {
                     objPosition.z = Mathf.Clamp(objPosition.z, min.z, max.z);
                     resultObjVelocity.z = -resultObjVelocity.z;
-                }                
+                }
             }
 
             resultObjVelocity = speed * resultObjVelocity.normalized;

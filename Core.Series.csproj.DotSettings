@@ -4,6 +4,9 @@
 	<s:Boolean x:Key="/Default/CodeInspection/NamespaceProvider/NamespaceFoldersToSkip/=assets_005Cspatialpartitionsystem_005Ccore_005Cscripts_005Cseries_005Ccommon_005Caabb/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/CodeInspection/NamespaceProvider/NamespaceFoldersToSkip/=assets_005Cspatialpartitionsystem_005Ccore_005Cscripts_005Cseries_005Cdebugdrawers/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/CodeInspection/NamespaceProvider/NamespaceFoldersToSkip/=assets_005Cspatialpartitionsystem_005Ccore_005Cscripts_005Cseries_005Cexample/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/CodeInspection/NamespaceProvider/NamespaceFoldersToSkip/=assets_005Cspatialpartitionsystem_005Ccore_005Cscripts_005Cseries_005Cexample_005Cbounds/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/CodeInspection/NamespaceProvider/NamespaceFoldersToSkip/=assets_005Cspatialpartitionsystem_005Ccore_005Cscripts_005Cseries_005Cexample_005Ctreecontrollers/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/CodeInspection/NamespaceProvider/NamespaceFoldersToSkip/=assets_005Cspatialpartitionsystem_005Ccore_005Cscripts_005Cseries_005Ctrees/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/CodeInspection/NamespaceProvider/NamespaceFoldersToSkip/=assets_005Cspatialpartitionsystem_005Ccore_005Cscripts_005Cseries_005Ctrees_005C2d/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/CodeInspection/NamespaceProvider/NamespaceFoldersToSkip/=assets_005Cspatialpartitionsystem_005Ccore_005Cscripts_005Cseries_005Ctrees_005C3d/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/CodeInspection/NamespaceProvider/NamespaceFoldersToSkip/=assets_005Cspatialpartitionsystem_005Ccore_005Cscripts_005Cseries_005Ctrees_005Csimpletree/@EntryIndexedValue">True</s:Boolean>

@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace SpatialPartitionSystem.Core.Series.Trees
+namespace SpatialPartitionSystem.Core.Series
 {
     public sealed class Quadtree<TObject> : BaseTree<TObject, AABB2D, Vector2> where TObject : class
     {
