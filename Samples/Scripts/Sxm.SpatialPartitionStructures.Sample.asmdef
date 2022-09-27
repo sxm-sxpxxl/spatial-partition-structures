@@ -1,0 +1,16 @@
+{
+    "name": "Sxm.SpatialPartitionStructures.Sample",
+    "rootNamespace": "",
+    "references": [
+        "GUID:cb145fd359b0497c8e8155e12aa9f349"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

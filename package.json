@@ -1,0 +1,31 @@
+{
+  "name": "com.sxm.spatial-partition-structures",
+  "version": "1.0.0",
+  "displayName": "Spatial Partition Structures",
+  "description": "A collection of well-known spatial partitioning data structures implemented in managed and native forms. The native form is multi-threaded with the Job System, compiled with Burst and calculations are done using the Mathematics library.",
+  "unity": "2020.3",
+  "unityRelease": "17f1",
+  "license": "MIT",
+  "keywords": [
+    "unity",
+    "quadtree",
+    "spatial-partitioning",
+    "native",
+    "job-system",
+    "burst"
+  ],
+  "author": {
+    "name": "Alexey Pestov",
+    "url": "https://github.com/sxm-sxpxxl"
+  },
+  "samples": [
+    {
+      "displayName": "Base sample",
+      "description": "Contains a scene with spatially distributed objects stored in spatial partition structures.",
+      "path": "Samples/"
+    }
+  ],
+  "dependencies": {
+    "com.unity.jobs": "0.50.0-preview.8"
+  }
+}
