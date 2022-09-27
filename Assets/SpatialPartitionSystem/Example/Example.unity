@@ -266,6 +266,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   treeLevel: 0
+  levelTreeLabelRect:
+    serializedVersion: 2
+    x: 0
+    y: 0
+    width: 100
+    height: 20
+  fontSize: 14
   maxLeafObjects: 16
   maxDepth: 4
   queryBoundsObj: {fileID: 415935029}
@@ -279,6 +286,7 @@ Transform:
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1552357659}
   - {fileID: 415935030}
@@ -314,6 +322,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1888415278}
   - {fileID: 437869229}
@@ -610,6 +619,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2039316868}
   m_RootOrder: 1
@@ -627,7 +637,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   isInnerBounds: 1
-  boundsColor: {r: 0, g: 0, b: 0, a: 1}
+  boundsColor: {r: 0, g: 0, b: 0, a: 0.39607844}
   bounds:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0.5, y: 0.5, z: 0}
@@ -675,6 +685,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7390689}
   m_RootOrder: 1
@@ -706,6 +717,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 56913741}
   m_RootOrder: 1
@@ -902,6 +914,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1862330208}
   - {fileID: 1745596658}
@@ -1177,6 +1190,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0.04, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
@@ -1815,6 +1829,7 @@ Transform:
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2039316868}
   m_RootOrder: 0
@@ -1922,6 +1937,7 @@ Transform:
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7390689}
   m_RootOrder: 0
@@ -2172,6 +2188,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 632649309}
   m_RootOrder: 1
@@ -2292,6 +2309,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1777711329}
   - {fileID: 991860602}
@@ -2332,6 +2350,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 64173713}
   - {fileID: 1353934815}
@@ -2526,6 +2545,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 0}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1464039750}
   - {fileID: 265401184}
@@ -2545,7 +2565,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   isInnerBounds: 0
-  boundsColor: {r: 1, g: 1, b: 1, a: 1}
+  boundsColor: {r: 1, g: 1, b: 1, a: 0.16862746}
   bounds:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 2, y: 2, z: 0}
@@ -2608,8 +2628,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dimension: 0
-  isMotionUpdated: 0
-  speed: 0.1
+  isMotionUpdated: 1
+  speed: 0.5
   onObjectUpdated:
     m_PersistentCalls:
       m_Calls:
@@ -2655,6 +2675,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   treeLevel: 0
-  maxLeafObjects: 4
+  levelTreeLabelRect:
+    serializedVersion: 2
+    x: 550
+    y: 110
+    width: 120
+    height: 30
+  fontSize: 18
+  maxLeafObjects: 2
   maxDepth: 6
   queryBoundsObj: {fileID: 265401185}

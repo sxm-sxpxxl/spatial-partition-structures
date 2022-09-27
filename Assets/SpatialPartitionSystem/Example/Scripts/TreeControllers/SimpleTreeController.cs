@@ -1,5 +1,6 @@
 ﻿#define SKIP
 
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using SpatialPartitionSystem.Core.Series;
@@ -15,6 +16,8 @@ namespace SpatialPartitionSystem.Example
         private const int MAX_TREE_LEVEL = 3;
 
         [SerializeField, Range(0, MAX_TREE_LEVEL - 1)] private int treeLevel = 0;
+        [SerializeField] private Rect levelTreeLabelRect = new Rect(0f, 0f, 100f, 20f);
+        [SerializeField] private int fontSize = 14;
 #endif
         [Tooltip("The maximum number of objects per leaf node.")]
         [SerializeField, Range(1, 16)] private int maxLeafObjects = 8;
@@ -37,7 +40,13 @@ namespace SpatialPartitionSystem.Example
         private int _lastTreeLevel = 0;
         
         protected abstract Dimension Dimension { get; }
-        
+
+        private void OnGUI()
+        {
+            GUI.skin.label.fontSize = fontSize;
+            GUI.Label(levelTreeLabelRect, $"Tree Level: {treeLevel}");
+        }
+
         private void OnDrawGizmos()
         {
             if (_tree == null || queryBoundsObj == null)

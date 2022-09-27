@@ -23,7 +23,7 @@ namespace SpatialPartitionSystem.Example
         private void OnDrawGizmos()
         {
             Gizmos.color = boundsColor;
-            Gizmos.DrawWireCube(Center, Size);
+            Gizmos.DrawCube(Center, Size);
         }
 
         private void Awake()
